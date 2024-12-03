@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model agent {
+  id                   String               @id(map: "PK_1000e989398c5d4ed585cf9a46f") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  agentName            String               @db.VarChar(255)
+  agentEmail           String               @unique(map: "UQ_6b6691ab149b2b4cd43ffd203fd") @db.VarChar(150)
+  agentPassword        String               @db.VarChar
+  tokenVersion         Int                  @default(1)
+  created_at           DateTime             @default(now()) @db.Timestamp(6)
+  updated_at           DateTime             @default(now()) @db.Timestamp(6)
+  roleId               String?              @db.Uuid
+  last_logged_at       DateTime             @default(now()) @db.Timestamp(6)
+  role                 role?                @relation(fields: [roleId], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_4de13a5a28e23e7e68b4136a444")
+  comment              comment[]
+  rejectedRequests     request_permission[] @relation("requests_rejectedByAgent")
+  requestedRequests    request_permission[] @relation("requests_forAgent")
+  approvedRequests     request_permission[] @relation("requests_approvedByAgent")
+  assignedAsSupervisor supervisors_agents[] @relation("supervisors_agents_assignedAsSupervisor")
+  assignedAsAgent      supervisors_agents[] @relation("supervisors_agents_assignedAsAgent")
+  ticket               ticket[]
+}
+
+model category {
+  id           String   @id(map: "PK_9c4e4a89e3674fc9f382d733f03") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryName String   @unique(map: "UQ_cb776c7d842f8375b60273320dc") @db.VarChar(150)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @db.Timestamp(6)
+  ticket       ticket[]
+}
+
+model comment {
+  id         String   @id(map: "PK_0b0e4bbc8415ec426f87f3a88e2") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  content    String
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  ticketId   String?  @db.Uuid
+  agentId    String?  @db.Uuid
+  agent      agent?   @relation(fields: [agentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_0d213e3b2a4c06b38fb10b7e1cd")
+  ticket     ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_7522f1f6b36fa4b1742762a17f9")
+}
+
+model customer {
+  id          String   @id(map: "PK_a7a13f4cacb744524e44dfdad32") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  c_name      String   @unique(map: "UQ_fd862345ba69c29b4481db057a8") @db.VarChar(255)
+  company     String?  @db.VarChar(255)
+  c_email     String   @unique(map: "UQ_8a311e65517e0feae004b611fcf") @db.VarChar(150)
+  c_telNumber String?  @db.VarChar
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+  updated_at  DateTime @default(now()) @db.Timestamp(6)
+  ticket      ticket[]
+}
+
+model dependent_tickets {
+  ticketId                          String @db.Uuid
+  dependentTicketId                 String @db.Uuid
+  ependent_tickets_ticket           ticket @relation("dependent_tickets_ticketId", fields: [ticketId], references: [id], onDelete: Cascade, map: "FK_5b74e54deb24e9f9dbfcc657695")
+  dependent_tickets_dependentTicket ticket @relation("dependent_tickets_dependentTicketId", fields: [dependentTicketId], references: [id], onDelete: Cascade, map: "FK_895ffb331de95d2d869684e76f6")
+
+  @@id([ticketId, dependentTicketId], map: "PK_3ea717424efee300a9a99d8263f")
+  @@index([ticketId], map: "IDX_5b74e54deb24e9f9dbfcc65769")
+  @@index([dependentTicketId], map: "IDX_895ffb331de95d2d869684e76f")
+}
+
+model engineer {
+  engineer_id      String             @id(map: "PK_7f46a5962f2029756e313e61317") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  engineer_name    String?            @db.VarChar(255)
+  engineer_email   String             @unique(map: "UQ_bf03388088b88ab53c7aafb8f2c") @db.VarChar(150)
+  engineer_tickets engineer_tickets[]
+}
+
+model engineer_tickets {
+  engineerId String   @db.Uuid
+  ticketId   String   @db.Uuid
+  engineer   engineer @relation(fields: [engineerId], references: [engineer_id], onDelete: SetNull, onUpdate: NoAction, map: "FK_2acee8a5d36cfb36ad74f2135b3")
+  ticket     ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade, map: "FK_7446c7277638d9f7d52ccadb6df")
+
+  @@id([engineerId, ticketId], map: "PK_7e57e3947e97d3e5a69e7847374")
+  @@index([engineerId], map: "IDX_2acee8a5d36cfb36ad74f2135b")
+  @@index([ticketId], map: "IDX_7446c7277638d9f7d52ccadb6d")
+}
+
+model request_permission {
+  request_id       String    @id(map: "PK_b928279192dbf9e8d5ada868ee3") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  request_status   String    @db.VarChar
+  requestType      String    @db.VarChar
+  issued_at        DateTime  @default(now()) @db.Timestamp(6)
+  approved_at      DateTime? @db.Timestamp(6)
+  rejected_at      DateTime? @db.Timestamp(6)
+  numberOfDays     Int?
+  agentName        String?   @db.VarChar(255)
+  agentEmail       String?   @db.VarChar(150)
+  agentPassword    String?   @db.VarChar
+  approvedBy       String?   @db.Uuid
+  rejectedBy       String?   @db.Uuid
+  requestForAgent  String?   @db.Uuid
+  rejectedByAgent  agent?    @relation("requests_rejectedByAgent", fields: [rejectedBy], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_3febbe2d24e5e498540ef0e6917")
+  requestedByAgent agent?    @relation("requests_forAgent", fields: [requestForAgent], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_9e2484029aed83d6f8e0cdfda09")
+  approvedByAgent  agent?    @relation("requests_approvedByAgent", fields: [approvedBy], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_a28922aee4e01f58a1085db2d68")
+}
+
+model role {
+  role_id          String  @id(map: "PK_df46160e6aa79943b83c81e496e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  role_description String  @unique(map: "UQ_6560f76603dbece78b1c50a0d41") @db.VarChar(150)
+  agent            agent[]
+}
+
+model ticket {
+  id                                String              @id(map: "PK_d9a0835407701eb86f874474b7c") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  issue_description                 String?
+  priority                          String              @db.VarChar(150)
+  status                            String              @db.VarChar(150)
+  featuredImageUrl                  String?             @db.VarChar(1054)
+  created_at                        DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                        DateTime            @default(now()) @db.Timestamp(6)
+  agentId                           String?             @db.Uuid
+  customerId                        String?             @db.Uuid
+  categoryId                        String?             @db.Uuid
+  comment                           comment[]
+  dependent_tickets_ticket          dependent_tickets[] @relation("dependent_tickets_ticketId")
+  dependent_tickets_dependentTicket dependent_tickets[] @relation("dependent_tickets_dependentTicketId")
+  engineer_tickets                  engineer_tickets[]
+  customer                          customer?           @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_8932781487db15d1393b206482e")
+  agent                             agent?              @relation(fields: [agentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_f5989db50fbbea2647f37d0d4d1")
+  category                          category?           @relation(fields: [categoryId], references: [id], onUpdate: NoAction, map: "FK_ffa1e18b27ae5dfb0988873354a")
+}
+
+model supervisors_agents {
+  id                                      String   @id(map: "PK_7edf180f8d708c3e058eee014ec") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supervisor                              String?  @db.Uuid
+  agent                                   String?  @db.Uuid
+  assigned_at                             DateTime @default(now()) @db.Timestamp(6)
+  supervisors_agents_assignedAsSupervisor agent?   @relation("supervisors_agents_assignedAsSupervisor", fields: [supervisor], references: [id], onUpdate: NoAction, map: "FK_0a5c0fcadda694cbbaba23e5771")
+  supervisors_agents_assignedAsAgent      agent?   @relation("supervisors_agents_assignedAsAgent", fields: [agent], references: [id], onUpdate: NoAction, map: "FK_c55285a52519da722bf35fdf201")
+
+  @@unique([supervisor, agent], map: "UQ_8606beeeb710838423ee61ebb2b")
+}

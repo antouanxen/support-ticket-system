@@ -1,0 +1,37 @@
+<h2 style="font-family: Arial, Helvetica, sans-serif; color: #333; text-align: center;">Request Update Notification</h2>
+<p style="margin-bottom: 10px;">Hello <%= agentNameRequested %>,</p>
+<p style="margin-bottom: 10px;">You had made a new request for "<%= requestType %>", on "<%= issued_at %>"</p>
+
+<p style="margin-bottom: 10px;">
+    Request ID: <strong style="color: #0056b3;">"<%= request_id %>"</strong> <br>
+    Request Type: <strong style="color: #0056b3;">"<%= requestType %>"</strong>
+</p>
+<p style="margin-bottom: 10px;">Your request was reviewed and got <%= request_status %>.</p>
+
+<% if (request_status === 'approved' && requestType === 'Stats Update') { %>
+    <p style="margin-bottom: 10px;">If you still want to carry on with your request, press the button below.:</p>
+    <p style="margin-bottom: 10px;">
+        <a href="<%= baseUrl %>/agents/<%= agentId %>/new_stats/<%= request_id %>/redirect"
+           style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
+            Validate Request
+        </a>
+    </p>
+<% } else if (request_status === 'approved' && requestType === 'Payed Leave') {  %>
+    <p style="margin-bottom: 10px;">If you still want to carry on with your request, press the button below.:</p>
+    <p style="margin-bottom: 10px;">
+        <a href="<%= baseUrl %>/agents/<%= agentId %>/new_stats/<%= request_id %>/redirect"
+           style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
+            Validate Request
+        </a>
+    </p>    
+<% } else if (request_status === 'rejected') {  %>
+    <p style="margin-bottom: 10px;">Unfortunately, if your request got <%= request_status %>, there may be some reasons for this action, contact your supervisor.</p>
+    <p style="margin-bottom: 10px;">You can check the details below, or make a new request.</p>
+    <p style="margin-bottom: 10px;">
+        <a href="<%= baseUrl %>/requests/permissions/<%= request_id %>" 
+           style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
+            View Request Details
+        </a>
+    </p>   
+<% } %>
+

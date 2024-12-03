@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Company</title>
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333;">
+    <header>
+        <h2 style="color: #2C3E50;">Our Company</h2>
+    </header>
+    <main>
+        <% if (typeof name !== 'undefined' && name) { %>
+           <%- include('./welcome') %>
+        <% } else if (typeof engineer_name !== 'undefined' && engineer_name) { %>
+            <%- include('./newTicket') %>
+        <% } else if (typeof agentName !== 'undefined' && agentName) { %>
+            <%- include('./newRequest') %>
+        <% } else if (typeof SVAgentName !== 'undefined' && SVAgentName) { %>
+            <%- include('./newRequestToProcess') %>
+        <% } else if (typeof agentNameRequested !== 'undefined' && agentNameRequested) { %>
+            <%- include('./requestForValid') %>
+        <% } %>
+    </main>
+    <footer style="font-size: 12px; color: #888; margin-top: 20px; text-align: center;">
+        <p style="font-size: 12px; color: #777; margin-bottom: 15px;">If you have any questions, don't hesitate to contact us at <a href="mailto:support@ticket_system_app.com" style="color: #007BFF;">support@ticket_system_app.com</a>.</p>
+        <p style="font-size: 12px; color: #777; margin-bottom: 5px;">&copy; 2024 Our Company. All rights reserved.</p>
+        <p style="font-size: 12px; color: #777; margin-bottom: 5px;">
+            This is an automated message, please do not reply.
+        </p>
+    </footer>
+</body>
+</html>

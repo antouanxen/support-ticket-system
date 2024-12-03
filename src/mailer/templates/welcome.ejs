@@ -1,0 +1,16 @@
+<h2 style="font-family: Arial, Helvetica, sans-serif; color: #333; text-align: center;">Hello New Member</h2>
+<p style="margin-bottom: 10px;">Dear <%= name %>,</p>
+<p style="margin-bottom: 10px;">Hi, and Welcome to the team!</p>
+<p style="margin-bottom: 10px;"> We are so happy to have you on board.</p>
+<p style="margin-bottom: 10px;"> 
+    <a href="<%= baseUrl %>/agents/<%= agentId %>" 
+        style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
+        Your profile
+    </a>
+</p>
+<p style="margin-bottom: 10px;">Here are your account details:</p>
+<ul style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; padding-left: 20px;">
+    <li style="color: #555555; margin-bottom: 5px">Your ID: <%= agentId %></li>
+    <li style="color: #555555; margin-bottom: 5px">Email: <%= email %></li>
+    <li style="color: #555555; margin-bottom: 5px">Name: <%= name %></li>
+</ul>
