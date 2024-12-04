@@ -175,13 +175,13 @@ export class RequestPermissionService {
         }
     }
 
-    public async findProcessedRequest(request_id: string, agentId: string) {
+    public async findProcessedRequest(agentId: string, request_id: string) {
         try {
            const processedRequest = await prisma.request_permission.findUnique({
                where: { 
+                   requestForAgent: agentId,
                    request_id: request_id,
-                   request_status: RequestStatus.APPROVED ? RequestStatus.APPROVED : RequestStatus.REJECTED,
-                   requestForAgent: agentId
+                   request_status: RequestStatus.APPROVED ? RequestStatus.APPROVED : RequestStatus.REJECTED
                 }
             })
             

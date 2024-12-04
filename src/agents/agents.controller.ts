@@ -188,7 +188,8 @@ export class AgentsController {
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
     public async updateAgent(@Param('agentId') agentId: string, @Param('request_id') request_id: string, @Req() req: Request, @Res() res: Response) {
         console.log('Ενημερωνεις εναν agent τα stats απο το εμαιλ')
-        const agentUpdated = await this.agentService.updateAgentDetails(request_id, agentId)
+        
+        const agentUpdated = await this.agentService.updateAgentDetails(agentId, request_id)
 
         if (agentUpdated) {
             console.log('Updated agent:', agentUpdated)
@@ -214,9 +215,10 @@ export class AgentsController {
     public async redirectAfterPost(@Param('agentId') agentId: string, @Param('request_id') request_id: string, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
+        agentId = userId
         console.log('Κανεις πρωτα post στο αλλο api για τα stats του agent')
 
-        if (!userId) res.redirect(`${process.env.BASE_URL}/auth/sign_in`)
+        if (!userId) return res.redirect(`${process.env.BASE_URL}/auth/sign_in`)
 
         try {
             const axiosResponse = await axios.post(`${process.env.BASE_URL}/agents/${agentId}/new_stats/${request_id}`)
