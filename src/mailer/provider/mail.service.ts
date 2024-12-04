@@ -23,8 +23,8 @@ export class MailService {
             subject: 'Welcome To The Team',
             template: './layout',
             context: {
-                agentId: agentId,
                 name: agentName,
+                agentId: agentId,
                 email: agentEmail,
                 baseUrl: baseUrl
             }

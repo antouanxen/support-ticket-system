@@ -189,9 +189,9 @@ export class AgentsService {
         }
     }
 
-    public async updateAgentDetails(request_id: string , agentId: string): Promise<UpdateAgentStatsDto | { message: string }> {
+    public async updateAgentDetails(agentId: string, request_id: string): Promise<UpdateAgentStatsDto | { message: string }> {
         
-        const processedRequest = await this.reqPermService.findProcessedRequest(request_id, agentId)
+        const processedRequest = await this.reqPermService.findProcessedRequest(agentId, request_id)
 
         if (processedRequest.request_status === RequestStatus.APPROVED) {
             const approvedRequest = processedRequest
