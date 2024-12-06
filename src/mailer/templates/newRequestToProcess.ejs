@@ -1,17 +1,22 @@
 <h2 style="font-family: Arial, Helvetica, sans-serif; color: #333; text-align: center;">New Request Notification</h2>
-<p style="margin-bottom: 10px;">Hello <%= SVAgentName %>,</p>
-<p style="margin-bottom: 10px;">A new request has been submitted and requires your review.</p>
+<p style="margin-bottom: 10px;">Dear <%= SVAgentName %>,</p>
+<p style="margin-bottom: 10px;">A new request has been submitted and is awaiting your review.</p>
+<p style="font-size: 26px; font-weight: bold; margin-bottom: 10px;">Request Details:</p>
 <p style="margin-bottom: 10px;">
-    Request ID: <strong style="color: #0056b3;">"<%= request_id %>"</strong> <br>
-    Request Type: <strong style="color: #0056b3;">"<%= requestType %>"</strong></p>
+<ul style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; padding-left: 20px;">
+    <li><strong>Request ID:</strong>"<%= request_id %>"</li>
+    <li><strong>Request Type:</strong>"<%= requestType %>"</li>
+</ul>
+</p>
 <p style="margin-bottom: 10px;">
     <a href="<%= baseUrl %>/tickets/<%= request_id %>" 
         style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
         View Request Details
     </a>
 </p>
-<p style="margin-bottom: 10px;">Here are some more details:</p>
+<p style="font-size: 26px; font-weight: bold; margin-bottom: 10px;">Additional Information:</p>
 <ul style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; padding-left: 20px;">
-    <li style="color: #555555; margin-bottom: 5px;">Requested By Agent: <%= agentEmailRequested %>, (ID: " <%= agentIdRequested %>")</li>
+    <li><strong>Request ID:</strong> 8da819e1-f650-44f5-8ca3-df47fbc0b768</li>
+    <li><strong>Request Type:</strong> Stats Update</li>
 </ul>
 <p style="margin-bottom: 10px;">Please review this request as soon as possible and update its status in the system.</p>

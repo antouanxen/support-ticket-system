@@ -1,5 +1,5 @@
-import { Exclude } from "class-transformer";
 import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { AuthRoles } from "../enums/roles.enum";
 
 export class SignUpDto {
 
@@ -20,6 +20,21 @@ export class SignUpDto {
     })
     password: string
 
+    @IsOptional() 
+    @IsNotEmpty()   
+    role: string | null;
+
+    @IsOptional()
+    @IsEmail()
+    agentOwnEmail?: string; 
+
+    @IsOptional()
+    @IsEmail()
+    engineerOwnEmail?: string;
+
+    @IsNotEmpty()
+    @IsString()
+    category: string
 
     constructor(partial: Partial<SignUpDto>) {
         Object.assign(this, partial);

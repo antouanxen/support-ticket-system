@@ -26,10 +26,6 @@ export class RequestForAgentUpdateDto {
     })
     agentPassword?: string
 
-    @IsOptional()
-    @IsUUID()
-    requestForAgent?: string
-
     constructor(partial: Partial<RequestForAgentUpdateDto>) {
         Object.assign(this, partial);
     }

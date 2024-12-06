@@ -20,12 +20,27 @@ export class CommentsService {
                 data: { 
                     content: content,
                     ticket: { connect: { id: ticketId } },
-                    agent: { connect: { id: userId } }
+                    user: { connect: { id: userId } }
                 },
-                include: { ticket: true }
+                select: {
+                    user: {
+                        select: {
+                            id: true,
+                            userEmail: true,
+                            userName: true,
+                            last_logged_at: true
+                        }
+                    },
+                    ticket: true,
+                    id: true,  
+                    content: true,  
+                    created_at: true,  
+                    ticketId: true,
+                    userId: true
+                }
             })
 
-            if (!newComment.ticket) throw new NotFoundException('The ticket was not found')
+            if (!newComment.ticket.id) throw new NotFoundException('The ticket was not found')
 
             return newComment
         } catch(err) {

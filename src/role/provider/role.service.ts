@@ -59,7 +59,18 @@ export class RoleService {
         try {
             const allRoles = await prisma.role.findMany({
                 orderBy: { role_description: 'desc' },
-                include: { agent: true }
+                select: {
+                    user: {
+                        select: {
+                            id: true,
+                            userEmail: true,
+                            userName: true,
+                            last_logged_at: true
+                        } 
+                    },
+                    role_description: true,
+                    role_id: true
+                }
             })
 
             return allRoles

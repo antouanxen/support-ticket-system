@@ -16,11 +16,4 @@ export class RequestForLeaveDto {
     @IsNumber()
     numberOfDays: number
 
-    @IsOptional()
-    @IsUUID()
-    requestForAgent?: string
-
-    @IsNotEmpty()
-    @IsUUID()
-    supervisorId?: string
 }

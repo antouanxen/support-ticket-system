@@ -12,7 +12,7 @@ export class CategoryController {
     constructor(private readonly categoryService: CategoryService) {}
 
     @Post()
-    @ApiOperation({ summary: 'Use this endpoint to create a category based on the body' })
+    @ApiOperation({ summary: 'Use this endpoint to create a category based on the body.(The name gets stored in lower case by default.)' })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
         schema: { type: 'object', properties: {

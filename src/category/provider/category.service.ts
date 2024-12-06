@@ -24,7 +24,7 @@ export class CategoryService {
             
             const newCategory = await prisma.category.create({
                 data: {
-                    categoryName: createCategoryDto.categoryName
+                    categoryName: createCategoryDto.categoryName.toLowerCase()
                 }
             })
 

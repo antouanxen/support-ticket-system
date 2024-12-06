@@ -14,13 +14,14 @@ export class EngineerController {
     ) {}
 
     @Post()
-    @ApiOperation({ summary: 'Use this endpoint to create an engineer based on the body' })
+    @ApiOperation({ summary: 'Use this endpoint to create an engineer based on the body. The user gets the role of "ENGINEER" automatically.' })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
         schema: { type: 'object', properties: {
             engineer_name: { type: 'string', example: 'Joshua', description: 'A text area for the name of the engineer.'},
-            engineer_email: { type: 'string', example: 'josh@ua.com', description: 'A text area for the description of the engineer.'},
-        }, required: ['engineer_email'] }, })
+            engineer_email: { type: 'string', example: 'josh@ua.com', description: 'A text area for the email of the engineer.'},
+            engineer_password: { type: 'string', example: 'Password123!', description: 'A text area for the password of the engineer.'},
+        }, required: ['engineer_email', 'engineer_password'] }, })
     @ApiResponse({ status: 201, description: 'A new engineer is created successfully and is stored in the database' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not create that engineer'})
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -102,7 +103,7 @@ export class EngineerController {
         const user = req.res.locals.user
         const userId = user.sub
 
-        updateEngineerDto.engineer_id = engineerId
+        updateEngineerDto.engineerId = engineerId
 
         console.log('Ενημερωνεις ενα engineer')
         const engineerUpdated = await this.engineerService.updateAnEngineerStats(updateEngineerDto, userId)

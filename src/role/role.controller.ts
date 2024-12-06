@@ -5,6 +5,7 @@ import { CreateRoleDto } from 'src/role/dtos/create-role.dto';
 import { Request, Response } from 'express';
 import { Roles } from 'src/authentication/decorators/roles.decorator';
 import { AuthRoles } from 'src/authentication/enums/roles.enum';
+import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
 
 @Controller('roles')
 @ApiTags('Roles')
@@ -15,7 +16,7 @@ export class RoleController {
     ) {}
 
     @Post()
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
     @ApiOperation({ summary: 'Use this endpoint to create a role based on the body || ** Roles: Admin, Moderator **' })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
@@ -105,7 +106,7 @@ export class RoleController {
     }
 
     @Delete(':roleId')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
     @ApiOperation({ summary: 'Use this endpoint to delete a single role || ** Roles: Admin, Moderator, Supervisor **' })
     @ApiParam({ name: 'roleId', schema: 
         { type: 'string', format: 'uuid', example: '4db445cc-89d3-4c9e-9d3a-c4c610805d25', description: 'Unique identifier for the resource' }, 

@@ -20,44 +20,50 @@ export class RequestPermissionService {
     ) {}
 
     public async requestForLeave(requestForLeaveDto: RequestForLeaveDto, userId: string) {
-        const agentId = userId
+        const agentExists = await prisma.agent.findUnique({ where: { userId: userId } });
 
-        if (!agentId) throw new NotFoundException('That user was not found')
+        if (!agentExists) throw new NotFoundException('Agent not found');
 
-        const { requestForAgent, requestType, request_status, numberOfDays, supervisorId } = requestForLeaveDto
+        const { requestType, request_status, numberOfDays } = requestForLeaveDto
 
         try {
             const newRequestForLeave = await prisma.request_permission.create({
                 data: {
-                    requestForAgent: agentId,
+                    requestForAgent: userId,
                     requestType: requestType,
                     request_status: request_status,
                     numberOfDays: numberOfDays
                 }
             })
+            
+            const assignedAgents = await this.findAssignedAgentsService.findAssignedAgents(agentExists.agentId)
 
-            const agent = await prisma.agent.findUnique({ 
-                where: { id: agentId },
-                include: { assignedAsSupervisor: true }
+            const agentRequesting = await prisma.agent.findUnique({ 
+                where: { userId: assignedAgents.supervisors_agents_assignedAsAgent.agentId },
+                include: { user: true }
+            })
+
+            const agentRequestingSupervisor = await prisma.agent.findUnique({ 
+                where: { userId: assignedAgents.supervisors_agents_assignedAsSupervisor.agentId },
+                include: { user: true }
             })
 
             const newRequestEmailData: NewRequestEmailData = {
-                agentEmail: agent.agentEmail,
-                agentName: agent.agentName, 
+                agentEmail: agentRequesting.user.userEmail,
+                agentName: agentRequesting.user.userName, 
                 requestType: newRequestForLeave.requestType,
                 request_id: newRequestForLeave.request_id
             }
             await this.mailService.sendEmailToAgentAfterRequest(newRequestEmailData)
             console.log('πηγε το εμαιλ για το νεο request')
 
-            const supervisorAgent = await this.findAssignedAgentsService.findAssignedAgents(supervisorId)
             const agentRequestToSVEmailData : AgentRequestToSVEmailData = {
-                agentEmail: supervisorAgent.supervisors_agents_assignedAsSupervisor.agentEmail,
-                agentName: supervisorAgent.supervisors_agents_assignedAsSupervisor.agentName, 
+                agentEmail: agentRequestingSupervisor.user.userEmail,
+                agentName: agentRequestingSupervisor.user.userName, 
                 requestType: newRequestForLeave.requestType,
                 request_id: newRequestForLeave.request_id,
-                agentIdRequested: supervisorAgent.supervisors_agents_assignedAsAgent.id,
-                agentEmailRequested: supervisorAgent.supervisors_agents_assignedAsAgent.agentEmail                
+                agentIdRequested: agentRequesting.user.id,
+                agentEmailRequested: agentRequesting.user.userEmail                
             }
             await this.mailService.sendEmailForAgentRequestToSV(agentRequestToSVEmailData)
             console.log('πηγε το εμαιλ για το νεο request για εξεταση στον supervisor')
@@ -65,7 +71,7 @@ export class RequestPermissionService {
             return newRequestForLeave
         } catch (err) {
             console.log('There was an error with the leave request', err)
-            throw new InternalServerErrorException(`There was an error with the request for leave for agent with ID: ${agentId}`)
+            throw new InternalServerErrorException(`There was an error processing the request for leave for agent with ID: ${userId}`)
         }
     }
 
@@ -74,7 +80,7 @@ export class RequestPermissionService {
 
         if (!agentId) throw new NotFoundException('That user was not found')
 
-        const { requestForAgent, requestType, request_status, agentName, agentEmail, agentPassword } = requestForAgentUpdate
+        const { requestType, request_status, agentName, agentEmail, agentPassword } = requestForAgentUpdate
 
         try {
             const newRequestForStatsUpdate = await prisma.request_permission.create({
@@ -87,29 +93,35 @@ export class RequestPermissionService {
                     agentPassword: agentPassword ?? null
                 }
             })
+            
+            const assignedAgents = await this.findAssignedAgentsService.findAssignedAgents(agentId)
 
-            const agent = await prisma.agent.findUnique({ 
-                where: { id: agentId },
-                include: { assignedAsSupervisor: true }
+            const agentRequesting = await prisma.agent.findUnique({ 
+                where: { userId: assignedAgents.supervisors_agents_assignedAsAgent.agentId },
+                include: { user: true }
+            })
+
+            const agentRequestingSupervisor = await prisma.agent.findUnique({ 
+                where: { userId: assignedAgents.supervisors_agents_assignedAsSupervisor.agentId },
+                include: { user: true }
             })
 
             const newRequestEmailData: NewRequestEmailData = {
-                agentEmail: agent.agentEmail,
-                agentName: agent.agentName, 
+                agentEmail: agentRequesting.user.userEmail,
+                agentName: agentRequesting.user.userName, 
                 requestType: newRequestForStatsUpdate.requestType,
                 request_id: newRequestForStatsUpdate.request_id
             }
             await this.mailService.sendEmailToAgentAfterRequest(newRequestEmailData)
             console.log('πηγε το εμαιλ για το νεο request')
 
-            const supervisorAgent = await this.findAssignedAgentsService.findAssignedAgents(agentId)
             const agentRequestToSVEmailData : AgentRequestToSVEmailData = {
-                agentEmail: supervisorAgent.supervisors_agents_assignedAsSupervisor.agentEmail,
-                agentName: supervisorAgent.supervisors_agents_assignedAsSupervisor.agentName, 
+                agentEmail: agentRequestingSupervisor.user.userEmail,
+                agentName: agentRequestingSupervisor.user.userName, 
                 requestType: newRequestEmailData.requestType,
                 request_id: newRequestEmailData.request_id,
-                agentIdRequested: supervisorAgent.supervisors_agents_assignedAsAgent.id,
-                agentEmailRequested: supervisorAgent.supervisors_agents_assignedAsAgent.agentEmail                
+                agentIdRequested: agentRequesting.user.id,
+                agentEmailRequested: agentRequesting.user.userEmail                
             }
             await this.mailService.sendEmailForAgentRequestToSV(agentRequestToSVEmailData)
             console.log('πηγε το εμαιλ για το νεο request για εξεταση στον supervisor')
@@ -125,15 +137,13 @@ export class RequestPermissionService {
     public async seenAndProcessRequestStatus(seenRequestDto: SeenRequestDto, userId: string) {
         const agentId = userId
 
-        if (!agentId) throw new NotFoundException('That user was not found')
-
         try {
             const reqToProcess = await prisma.request_permission.findUnique({ 
                 where: { request_id: seenRequestDto.request_id },
                 include: { requestedByAgent: true } 
             })
 
-            if (agentId === reqToProcess.requestedByAgent.id) {
+            if (agentId === reqToProcess.requestedByAgent.agentId) {
                 console.log('O user εχει ιδιο id με αυτον που εκανε το request')
                 throw new ForbiddenException('You cannot approve or reject your own requests.')
             }
@@ -147,14 +157,27 @@ export class RequestPermissionService {
                     approved_at: seenRequestDto.request_status === RequestStatus.APPROVED ? new Date() : null,
                     rejected_at: seenRequestDto.request_status === RequestStatus.REJECTED ? new Date() : null
                 },
-                include: { requestedByAgent: { select: { id: true, agentEmail: true, agentName: true } } }
+                include: { 
+                    requestedByAgent: {
+                        select: {
+                            agentId: true, 
+                            user: {
+                                select: {
+                                    id: true,
+                                    userEmail: true,
+                                    userName: true,
+                                }
+                            }  
+                        } 
+                    } 
+                }
             })
 
-            const agentWhoRequested = await prisma.agent.findUnique({ where: { id: request.requestedByAgent.id } }) 
+            const agentWhoRequested = await prisma.agent.findUnique({ where: { agentId: request.requestedByAgent.agentId }, include: { user: true } }) 
             const updateValidationEmailData : UpdateValidationEmailData = {
-                agentId: agentWhoRequested.id,  
-                agentEmail: agentWhoRequested.agentEmail,
-                agentName: agentWhoRequested.agentName, 
+                agentId: agentWhoRequested.agentId,  
+                agentEmail: agentWhoRequested.user.userEmail,
+                agentName: agentWhoRequested.user.userName, 
                 request_id: request.request_id,
                 requestType: request.requestType,
                 request_status: request.request_status,            
@@ -235,11 +258,15 @@ export class RequestPermissionService {
                 where: { request_id: request_id },
                 include: { 
                     requestedByAgent: { 
-                        select: { 
-                            id: true,
-                            agentName: true,
-                            agentEmail: true,
-                            last_logged_at: true
+                        select: {
+                            agentId: true, 
+                            user: {
+                                select: {
+                                    id: true,
+                                    userEmail: true,
+                                    userName: true,
+                                }
+                            }  
                         }
                     } 
                 }

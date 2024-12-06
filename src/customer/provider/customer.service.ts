@@ -56,11 +56,19 @@ export class CustomerService {
         }
     }
 
-    public async getSingleCustomerByName(name: string): Promise<customer> {
+    public async getSingleCustomerByName(name: string): Promise<Partial<customer>> {
         try {
             const singleCustomer = await prisma.customer.findFirst({
                 where: { c_name: name },
-                include: { ticket: true }
+               select: { 
+                    ticket: true,
+                    id: true,
+                    c_name: true,
+                    c_email: true, 
+                    c_telNumber: true,
+                    company: true,
+                    created_at: true 
+                }
             })
 
             if (!singleCustomer) throw new NotFoundException('That customer was not found')

@@ -26,7 +26,7 @@ export class RequestPermissionController {
             numberOfdays: { type: 'number', example: '6', description: 'Number of days for the payed leave for the agent making the request' },
             request_status: { type: 'string', default: 'pending', description: 'The status of the request, default is always pending.'},
             requestType: { type: 'string', default: 'payed_leave', description: 'The type of request, default is always payed_leave.'},
-            supervisorId: { type: 'string', format: 'UUID', example: 'ff4cb519-7a04-4bb3-8610-37fbf49226ec', description: 'The ID of the supervisor' }
+            //supervisorId: { type: 'string', format: 'UUID', example: 'ff4cb519-7a04-4bb3-8610-37fbf49226ec', description: 'The ID of the supervisor' }
         }, required: ['numberOfDays'] }, })
     @ApiResponse({ status: 201, description: 'A new role is created successfully and is stored in the database' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not create that role'})
@@ -80,7 +80,7 @@ export class RequestPermissionController {
 
     @ApiBearerAuth()
     @Patch(':requestId/process_requests')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
     @ApiOperation({ summary: 'Use this endpoint to update a request status based on the body || ** Roles: Admin, Moderator, Supervisor **' })
     @ApiParam({
         name: 'requestId', 
@@ -117,7 +117,7 @@ export class RequestPermissionController {
 
     @ApiBearerAuth()
     @Get('pending_requests')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
     @ApiOperation({ summary: 'Use this endpoint to fetch all pending requests from the database || ** Roles: Admin, Moderator, Supervisor **' })
     @ApiResponse({ status: 200, description: 'All the pending requests were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -139,7 +139,7 @@ export class RequestPermissionController {
 
     @ApiBearerAuth()
     @Get('requests_admin_check')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
     @ApiOperation({ summary: 'Use this endpoint to fetch all processed requests from the database || ** Roles: Admin, Moderator **' })
     @ApiResponse({ status: 200, description: 'All the processed requests were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -187,7 +187,7 @@ export class RequestPermissionController {
 
     @ApiBearerAuth()
     @Delete()
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
+    //([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
     @ApiOperation({ summary: 'Use this endpoint to delete the latest 5 requests from the database || ** Roles: Admin, Moderator, Supervisor **' })
     @ApiResponse({ status: 200, description: 'The last 5 requests deleted successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })

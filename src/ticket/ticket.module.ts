@@ -10,11 +10,13 @@ import authConfig from 'src/authentication/config/authConfig';
 import { JwtModule } from '@nestjs/jwt';
 import { EngineerModule } from 'src/engineer/engineer.module';
 import { DependentTicketService } from './provider/dependent-ticket.service';
+import { GenerateCustomTicketIdService } from './provider/generate-custom-ticket-id.service';
+import { AssignTicketsByCatsToEngService } from './provider/assign-tickets-by-cats-to-eng.service';
 
 @Module({
   imports: [CommentsModule, CategoryModule, CustomerModule, EngineerModule, ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
   controllers: [TicketController],
-  providers: [TicketService, MetricsService, DependentTicketService],
+  providers: [TicketService, MetricsService, DependentTicketService, GenerateCustomTicketIdService, AssignTicketsByCatsToEngService],
   exports: [TicketService]
 })
 export class TicketModule {}

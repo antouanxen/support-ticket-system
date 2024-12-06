@@ -6,9 +6,9 @@ import { Status } from 'src/ticket/enum/status.enum';
 export class EngineerTicketsService {
     constructor() {}
 
-    public async getEngineerTicket(newTicket_id: string, engineer_id: string) {
+    public async getEngineerTicket(newTicket_id: string, engineerId: string) {
         const engineerExists = await prisma.engineer.findUnique({
-            where: { engineer_id: engineer_id }
+            where: { engineerId: engineerId }
         });
     
         if (!engineerExists) throw new NotFoundException('Engineer not found.');
@@ -16,7 +16,7 @@ export class EngineerTicketsService {
         await prisma.engineer_tickets.create({ 
             data: {
                 ticketId: newTicket_id,
-                engineerId: engineer_id
+                engineerId: engineerExists.engineerId
             }
         })
 
