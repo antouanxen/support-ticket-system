@@ -9,7 +9,6 @@ import { Status } from './enum/status.enum';
 import { SortTicketsDto } from './dtos/sort-tickets.dto';
 import { getTicketsToSort } from 'utils/getTicketsToSort';
 import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
-import { AssignTicketToEngDto } from './dtos/assignTicket-toEng.dto';
 
 @Controller('tickets')
 @ApiTags('Tickets')
@@ -18,7 +17,7 @@ export class TicketController {
 
     @ApiBearerAuth()
     @Post()
-    @ApiOperation({ summary: 'Use this endpoint to create a ticket, and also send a new email to the engineer assigned with it, based on the body' })
+    @ApiOperation({ summary: 'Use this endpoint to create a ticket, and also send a new email to the engineer assigned with it, based on the body. If there is no engineerId handed, it automatically checkes the database for the engineers specialised in a single category. If there are not, it returns the total.' })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
         schema: { type: 'object', properties: {
@@ -28,8 +27,8 @@ export class TicketController {
             categoryName: { type: 'string', example: 'billing', description: 'A category summary of the ticket issued, maybe you need to create a category first if you cannot find one you need'},
             status: { type: 'string', default: 'pending', description: 'An enum for the status of the ticket issued, use the example options as shown'},
             featuredImageUrl: { type: 'string/url', example: 'http://localhost.com/images/image1.jpg', description: 'An image url for the ticket' },
-            engineer_id: { type: 'string', format: 'uuid', example: '92a04c73-05b2-4cd5-9513-66e623c6a41a', description: 'An ID of a engineer, dependent on the ticket you are creating.' },
-            dependent_ticketId: { type: 'string', format: 'uuid', example: '15c2956b-1d27-4282-89da-d83dd7b44a49', description: 'An ID of a different ticket, dependent on the one you are creating.' }
+            engineerId: { type: 'string', format: 'uuid', example: '92a04c73-05b2-4cd5-9513-66e623c6a41a', description: 'The ID of an engineer, dependent on the ticket you are creating. Optional.' },
+            dependent_ticketId: { type: 'string', format: 'uuid', example: '15c2956b-1d27-4282-89da-d83dd7b44a49', description: 'The ID of a different ticket, dependent on the one you are creating. Optional.' }
         }, required: ['c_name', 'priority', 'status', 'categoryName'] }, })
     @ApiResponse({ status: 201, description: 'A ticket is created successfully and gets stored in the database' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not create that ticket'})
@@ -67,17 +66,16 @@ export class TicketController {
     @ApiResponse({ status: 404, description: 'Not found. Could not find that ticket or the engineer.'})
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async assignTicketToEng(@Param('ticketId') ticketId: string, @Body() assignTicketToEngDto: AssignTicketToEngDto, @Req() req: Request, @Res() res: Response) {
+    public async assignTicketToEng(@Param('ticketId') ticketId: string, @Body() engineerId: string, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
 
-        assignTicketToEngDto.ticket_id = ticketId
         console.log('Kάνεις ενα ticket assign σε εναν engineer')
-        const ticketAssigned = await this.ticketService.assignTicketToEng(assignTicketToEngDto, userId)
+        const ticketAssigned = await this.ticketService.assignTicketToEng(ticketId, engineerId, userId)
 
         if (ticketAssigned) {
             console.log('ticket was assigned')
-            return res.status(200).json({ message: `The ticket (ID: ${assignTicketToEngDto.ticket_id}) was assigned to the engineer (ID: ${assignTicketToEngDto.engineer_id})`})
+            return res.status(200).json({ message: `The ticket (ID: ${ticketId}) was assigned to the engineer (ID: ${engineerId})`})
         }  else return res.status(400).json({ message: 'The ticket was not assigned, check the body' })
     }
 

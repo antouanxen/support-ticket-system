@@ -21,13 +21,15 @@ export class AgentsService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const allAgents = await prisma.agent.findMany({
+            const allAgents = await prisma.user.findMany({
+                where: { agent: { NOT: null } },
                 select: { 
                     id: true,
-                    agentName: true,
-                    agentEmail: true,
+                    userName: true,
+                    userEmail: true,
                     last_logged_at: true,
-                    role: { select: { role_description: true } } 
+                    role: { select: { role_description: true } },
+                    agent: true
                 }
             }) 
 
@@ -44,14 +46,15 @@ export class AgentsService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const allAgentWithRoles = await prisma.agent.findMany({
-                where: { roleId: { not: null } },
+            const allAgentWithRoles = await prisma.user.findMany({
+                where: { roleId: { not: null }, agent: { NOT: null } },
                 select: { 
                     id: true,
-                    agentName: true,
-                    agentEmail: true,
+                    userName: true,
+                    userEmail: true,
                     last_logged_at: true,
-                    role: { select: { role_description: true } } 
+                    role: { select: { role_description: true } },
+                    agent: true 
                 }
             }) 
 
@@ -68,13 +71,15 @@ export class AgentsService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const allAgentsLogs = await prisma.agent.findMany({
+            const allAgentsLogs = await prisma.user.findMany({
+                where: { agent: { NOT: null } },
                 select: { 
                     id: true,
-                    agentName: true,
-                    agentEmail: true,
+                    userName: true,
+                    userEmail: true,
                     last_logged_at: true,
-                    role: { select: { role_description: true } }
+                    role: { select: { role_description: true } },
+                    agent: true
                 },
                 orderBy: {
                     last_logged_at: 'desc'
@@ -93,13 +98,19 @@ export class AgentsService {
     public async getSingleAgent(agentIdTofind: string) {
         try {
             const agentToFind = await prisma.agent.findUnique({
-                where: { id: agentIdTofind },
-                select: { 
-                    id: true,
-                    agentName: true,
-                    agentEmail: true,
-                    last_logged_at: true,
-                    role: { select: { role_description: true } }
+                where: { userId: agentIdTofind },
+                select: {
+                    agentId: true,
+                    agentOwnEmail: true, 
+                    user: {
+                        select: {
+                            id: true,
+                            userName: true,
+                            userEmail: true,
+                            last_logged_at: true,
+                            role: { select: { role_description: true } }
+                        }       
+                    }
                 }
             })
 
@@ -123,11 +134,12 @@ export class AgentsService {
         try {
             const [supervisor, agentToGetAssigned] = await Promise.all([ 
                 prisma.agent.findUnique({ 
-                    where: { id: supervisorId },
-                    include: { role: true }
+                    where: { userId: supervisorId },
+                    include: { user: true }
                 }),
                 prisma.agent.findUnique({ 
-                    where: { id: agentIdToGetAssigned } 
+                    where: { userId: agentIdToGetAssigned},
+                    include: { user: true } 
                 })
             ])   
 
@@ -136,8 +148,8 @@ export class AgentsService {
             try {
                 await prisma.supervisors_agents.create({ 
                     data: {
-                        supervisor: supervisor.id,
-                        agent: agentToGetAssigned.id,
+                        supervisor: supervisor.agentId,
+                        agent: agentToGetAssigned.agentId,
                         assigned_at: new Date()
                     }
                 })
@@ -149,7 +161,7 @@ export class AgentsService {
             
             // εδω θα στελνεται το εμαιλ στον SV για την αναθεση
 
-            console.log(`Η αναθεση μεταξυ supervisor (ID: ${supervisor.id}) & agent (ID: ${agentToGetAssigned.id}) ολοκληρωθηκε`)
+            console.log(`Η αναθεση μεταξυ supervisor (ID: ${supervisor.agentId}) & agent (ID: ${agentToGetAssigned.agentId}) ολοκληρωθηκε`)
             return result
         } catch (err) {
             console.log('there was an error getting the assignement completed', err)
@@ -166,20 +178,19 @@ export class AgentsService {
 
         try {
             const agentToUpdateRole = await prisma.agent.findUnique({
-                where: { id: agentIdForRole }
+                where: { userId: agentIdForRole }
             })
 
             if (!agentToUpdateRole) throw new NotFoundException('That agent does not exist in the database')
             
             const roleForAgent = await this.roleService.findRoleByDesc(role_description)
 
-            const updatedRoleForAgent = await prisma.agent.update({
-                where: { id: agentToUpdateRole.id },
+            const updatedRoleForAgent = await prisma.user.update({
+                where: { id: agentToUpdateRole.userId},
                 data : {
                     roleId: roleForAgent.role_id,
                     updated_at: new Date()
-                },
-                include: { role: true }
+                }
             })
 
             return updatedRoleForAgent
@@ -198,21 +209,21 @@ export class AgentsService {
             
             if (approvedRequest && approvedRequest.requestForAgent === agentId) {
                 try {
-                    const agentToBeUpdated = await prisma.agent.findUnique({ where: { id: agentId } })
+                    const agentToBeUpdated = await prisma.agent.findUnique({ where: { userId: agentId }, include: { user: true} })
                     if (!agentToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
         
-                    const updatedAgentWithPerm = await prisma.agent.update({ 
-                        where: { id: agentToBeUpdated.id },
+                    const updatedAgentWithPerm = await prisma.user.update({ 
+                        where: { id: agentToBeUpdated.userId },
                         data: {
-                            agentName: approvedRequest.agentName ?? agentToBeUpdated.agentName,
-                            agentEmail: approvedRequest.agentEmail ?? agentToBeUpdated.agentEmail,
-                            agentPassword: approvedRequest.agentPassword ?? agentToBeUpdated.agentPassword
+                            userName: approvedRequest.agentName ?? agentToBeUpdated.user.userName,
+                            userEmail: approvedRequest.agentEmail ?? agentToBeUpdated.user.userEmail,
+                            userPassword: approvedRequest.agentPassword ?? agentToBeUpdated.user.userPassword
                         }
                     })
     
                     const agentStats = new UpdateAgentStatsDto({
-                        agentName: updatedAgentWithPerm.agentName,
-                        agentEmail: updatedAgentWithPerm.agentEmail
+                        agentName: updatedAgentWithPerm.userName,
+                        agentEmail: updatedAgentWithPerm.userEmail
                     })
         
                     return agentStats
@@ -236,12 +247,12 @@ export class AgentsService {
 
         try {
             const agentToBeDeleted = await prisma.agent.findUnique({
-                where: { id: agentIdToDelete }
+                where: { userId: agentIdToDelete }
             })
 
             if (!agentToBeDeleted) throw new NotFoundException('Agent not found');
 
-            await prisma.agent.delete({ where: { id: agentIdToDelete } })
+            await prisma.agent.delete({ where: { userId: agentIdToDelete } })
 
             return;
         } catch(err) {

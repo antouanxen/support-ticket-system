@@ -1,13 +1,21 @@
 <h2 style="font-family: Arial, Helvetica, sans-serif; color: #333; text-align: center;">New Request Notification</h2>
-<p style="margin-bottom: 10px;">Hello <%= agentName %>,</p>
-<p style="margin-bottom: 10px;">You have made a new request for <%= requestType %>.</p>
+<p style="margin-bottom: 10px;">Dear <%= agentName %>,</p>
+<p style="margin-bottom: 10px;">Thank you for submitting a new request for a <strong><%= requestType %></strong>.</p>
+<p style="font-size: 26px; font-weight: bold; margin-bottom: 10px;">Request Details:</p>
 <p style="margin-bottom: 10px;">
-    Request ID: <strong style="color: #0056b3;">"<%= request_id %>"</strong> <br>
-    Request Type: <strong style="color: #0056b3;">"<%= requestType %>"</strong></p>
+<ul style="font-family: Arial, Helvetica, sans-serif; font-size: 16px; color: #333333; padding-left: 20px;">
+    <li><strong>Request ID:</strong>"<%= request_id %>"</li>
+    <li><strong>Request Type:</strong>"<%= requestType %>"</li>
+</ul>
+</p>
+<p style="margin-bottom: 10px;">You can view the full request details below:</p>
 <p style="margin-bottom: 10px;">
     <a href="<%= baseUrl %>/requests/permissions/<%= request_id %>" 
        style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
         View Request Details
     </a>
 </p>
-<p style="margin-bottom: 10px;">A supervisor from the team is going to check on that and let you know about its status.</p>
+<p style="margin-bottom: 10px;">A supervisor from the team is going to review your request shortly. You will be notified of its status once the review is completed.</p>
+<p style="margin-bottom: 10px;">Best regards, <br>
+    The support team
+</p>

@@ -1,5 +1,5 @@
 export interface WelcomeEmailData {
-    agentId: string
-    agentEmail: string
-    agentName: string
+    userId: string
+    userEmail: string
+    userName: string
 }

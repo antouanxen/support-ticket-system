@@ -14,7 +14,8 @@ import { NewTicketEmailData } from 'src/mailer/interfaces/NewTicketeEmailData.in
 import { EngineerService } from 'src/engineer/provider/engineer.service';
 import { MailService } from 'src/mailer/provider/mail.service';
 import { DependentTicketService } from './dependent-ticket.service';
-import { AssignTicketToEngDto } from '../dtos/assignTicket-toEng.dto';
+import { GenerateCustomTicketIdService } from './generate-custom-ticket-id.service';
+import { AssignTicketsByCatsToEngService } from './assign-tickets-by-cats-to-eng.service';
 
 @Injectable()
 export class TicketService {
@@ -26,28 +27,34 @@ export class TicketService {
         private readonly engineerService: EngineerService,
         private readonly dependentTicketService: DependentTicketService,
         private readonly mailService: MailService,
+        private readonly generateCustomTicketIdService: GenerateCustomTicketIdService,
+        private readonly assignTicketsByCatsToEngService: AssignTicketsByCatsToEngService,
     ) {}
 
     public async createTicket(createTicketDto: CreateTicketDto, userId: string): Promise<ticket> {
-        const { c_name, issue_description, priority, categoryName, featuredImageUrl, dependent_ticketId, engineer_id } = createTicketDto
+        const { c_name, issue_description, priority, categoryName, featuredImageUrl, dependent_ticketId, engineerIds } = createTicketDto
 
-        const agentId = userId
+        const agent = await prisma.agent.findUnique({ 
+            where: { userId: userId }
+        })
 
-        if (!agentId) throw new NotFoundException('User does not exist')
+        if (!agent) throw new NotFoundException('User does not exist')
 
         const customer = await this.customerService.getSingleCustomerByName(c_name)
         const category = await this.categoryService.getSingleCategoryByName(categoryName)
+        const customId = await this.generateCustomTicketIdService.generateCustomTicketId(categoryName)
         
         try {
             const newTicket = await prisma.ticket.create({
                 data: {
                     customerId: customer.id,
-                    agentId: agentId,
+                    agentAgentId: agent.agentId,
                     issue_description: issue_description, 
                     priority: priority,
                     categoryId: category.id,
                     featuredImageUrl: featuredImageUrl ? featuredImageUrl : null,
                     status: Status.PENDING,
+                    customTicketId: customId
                 },
                 include: { customer: true }
             })
@@ -57,20 +64,14 @@ export class TicketService {
                     await this.dependentTicketService.getDependentTicket(newTicket.id, dependent_ticketId)
             }
             
-            if (engineer_id) {
-                const engineer = await this.engineerService.findSingleEngineer(engineer_id)
-                await this.engineerService.getEngineerTicket(newTicket.id, engineer.engineer_id)
-
-                const newTicketEmailData: NewTicketEmailData = {
-                    engineer_email: engineer.engineer_email,
-                    engineer_name: engineer.engineer_name,
-                    newTicket_id: newTicket.id,
-                    c_name: newTicket.customer.c_name,
-                    issue_description: newTicket.issue_description, 
-                    priority: newTicket.priority
-                }
-                await this.mailService.sendEmailForNewTicket(newTicketEmailData)
-                console.log('πηγε το εμαιλ για το νεο ticket')    
+            if (engineerIds) {
+                await this.assignTicketToEng(newTicket.id, engineerIds, userId)
+            } else {
+                const availableEngs = await this.assignTicketsByCatsToEngService.assignTicketsByCatsToEngs(priority, categoryName, newTicket.id)
+                await Promise.all(
+                    availableEngs.map(engineer => this.engineerService.getEngineerTicket(newTicket.id, engineer.engineerId))
+                )
+                console.log('εγινε αυτοματα η αναθεση')
             }
 
             return newTicket
@@ -80,36 +81,52 @@ export class TicketService {
         }
     }
 
-    public async assignTicketToEng(assignTicketToEng: AssignTicketToEngDto, userId: string) {
-        const agentId = userId
-        const { ticket_id, engineer_id } = assignTicketToEng
+    public async assignTicketToEng(ticketId: string, engineerIds: string | string[], userId: string) {
+        const agent = await prisma.agent.findUnique({ 
+            where: { userId: userId }
+        })
 
-        if (!agentId) throw new NotFoundException('User does not exist')
+        if (!agent) throw new NotFoundException('User does not exist')
 
-        const ticket = await prisma.ticket.findUnique({ where: { id: ticket_id }, include: { customer: true } })
+        const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, include: { customer: true } })
             
         if (!ticket) throw new NotFoundException('Ticket does not exist')
         
-        if (engineer_id) {
+        if (engineerIds.length > 0) {    
             try {
-                const engineer = await this.engineerService.findSingleEngineer(engineer_id)
-                if (!engineer) throw new NotFoundException('Engineer does not exist in database ')
+                const engineers = await prisma.user.findMany({ 
+                    where: {
+                        engineer: {
+                            is: {
+                                engineerId: {
+                                    in: Array.isArray(engineerIds) ? engineerIds : [engineerIds] 
+                                }  
+                            } 
+                        }
+                    } 
+                })
+                if (!engineers) throw new NotFoundException('Engineer does not exist in database ')
 
-                await this.engineerService.getEngineerTicket(ticket.id, engineer.engineer_id)
+                if (engineers.length !== engineerIds.length) throw new BadRequestException('Some of the provided engineers do not exist in the database')
+
+                for (const engineer of engineers) {
+                    await this.engineerService.getEngineerTicket(ticket.id, engineer.id)
                 
-                const newTicketEmailData: NewTicketEmailData = {
-                    engineer_email: engineer.engineer_email,
-                    engineer_name: engineer.engineer_name,
-                    newTicket_id: ticket.id,
-                    c_name: ticket.customer.c_name,
-                    issue_description: ticket.issue_description, 
-                    priority: ticket.priority
+                    const newTicketEmailData: NewTicketEmailData = {
+                        engineer_email: engineer.userEmail,
+                        engineer_name: engineer.userName,
+                        newTicket_id: ticket.id,
+                        c_name: ticket.customer.c_name,
+                        issue_description: ticket.issue_description, 
+                        priority: ticket.priority
+                    }
+
+                    //await this.mailService.sendEmailForNewTicket(newTicketEmailData)
+                    console.log('πηγε το εμαιλ για το νεο ticket')    
+                    console.log(`Aνανεωθηκε το relation με τον engineer με ID: ${engineer.id} και το ticket με ID: ${ticket.id}`)
                 }
-                await this.mailService.sendEmailForNewTicket(newTicketEmailData)
-                console.log('πηγε το εμαιλ για το νεο ticket')    
-                console.log(`Aνανεωθηκε το relation με τον engineer με ID: ${engineer.engineer_id} και το ticket με ID: ${ticket.id}`)
             } catch (err) {
-                console.log('ticket was not created', err)
+                console.log('ticket was not created due to engineer assignment issue', err)
                 throw new InternalServerErrorException('There was an error with the server. Try again')
             }
             return true
@@ -117,9 +134,11 @@ export class TicketService {
     } 
 
     public async getAllTickets(sortTicketsDto: SortTicketsDto, userId: string): Promise<ticket[]> {
-        const agentId = userId
+        const agent = await prisma.agent.findUnique({ 
+            where: { userId: userId }
+        })
 
-        if (!agentId) throw new NotFoundException('User does not exist')
+        if (!agent) throw new NotFoundException('User does not exist')
         
         try {
             const ticketList = await prisma.ticket.findMany({
@@ -128,10 +147,10 @@ export class TicketService {
                     category: true,
                     customer: true,
                     comment: true,
-                    agent: { select: { id: true, agentEmail: true, agentName: true } },
+                    agent: { select: { agentId: true, user: { select: { id: true, userName: true, userEmail: true } } } },
                     dependent_tickets_dependentTicket: true,
                     dependent_tickets_ticket: true,
-                    engineer_tickets: true
+                    engineer_tickets: { select: { engineerId: true } }
                 }
             })
 
@@ -152,10 +171,10 @@ export class TicketService {
                     category: true,
                     customer: true,
                     comment: true,
-                    agent: { select: { id: true, agentEmail: true, agentName: true } },
+                    agent: { select: { agentId: true, user: { select: { id: true, userName: true, userEmail: true } } } },
                     dependent_tickets_dependentTicket: true,
                     dependent_tickets_ticket: true,
-                    engineer_tickets: true
+                    engineer_tickets: { select: { engineerId: true } }
                 }
             })
 
@@ -184,7 +203,8 @@ export class TicketService {
                 include: { 
                     comment: true,
                     dependent_tickets_dependentTicket: true, 
-                    dependent_tickets_ticket: true
+                    dependent_tickets_ticket: true,
+                    engineer_tickets: { select: { engineerId: true } }
                 }
             })
             

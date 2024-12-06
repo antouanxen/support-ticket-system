@@ -15,17 +15,17 @@ export class MailService {
     ) {}
 
     public async sendEmailWelcome(data: WelcomeEmailData) {
-        const { agentId, agentEmail, agentName } = data
+        const { userId, userEmail, userName } = data
         const baseUrl = process.env.BASE_URL
         await this.mailerService.sendMail({
-            to: agentEmail,
+            to: userEmail,
             from: `Support Team <no-reply@support-ticket-team.com>`,
             subject: 'Welcome To The Team',
             template: './layout',
             context: {
-                name: agentName,
-                agentId: agentId,
-                email: agentEmail,
+                name: userName,
+                agentId: userId,
+                email: userEmail,
                 baseUrl: baseUrl
             }
         })

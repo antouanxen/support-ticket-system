@@ -9,15 +9,16 @@ export class FindAssignedAgentsService {
         if (!agentId) throw new NotFoundException('The ID for the agent is required.')
         
         try {
-            const supervisorAgentExists = await prisma.supervisors_agents.findFirst({ 
+            const assignedAgents = await prisma.supervisors_agents.findFirst({ 
                 where: { agent: agentId },
                 include: { 
                     supervisors_agents_assignedAsSupervisor: true,
-                    supervisors_agents_assignedAsAgent: true
+                    supervisors_agents_assignedAsAgent: true,
+                    
                 }
             }) 
 
-            return supervisorAgentExists
+            return assignedAgents
         } catch (err) {
             console.log('O agent δεν βρεθηκε', err)
             throw new NotFoundException(`The agent (ID: ${agentId} does not exist. Try again)`)

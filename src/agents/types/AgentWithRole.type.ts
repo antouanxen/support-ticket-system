@@ -1,6 +1,6 @@
 export type AgentWithRole = {
     id: string
-    agentName: string
+    userName: string
     role?: {
         role_id: string
         role_description: string

@@ -5,5 +5,5 @@ import { PartialType } from "@nestjs/swagger";
 export class UpdateEngineerDto extends PartialType(CreateEngineerDto) {
     @IsOptional()
     @IsUUID()
-    engineer_id?: string
+    engineerId?: string
 }

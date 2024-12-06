@@ -61,7 +61,7 @@ export class AgentsController {
     }
 
     @Get('logs')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
     @ApiOperation({ summary: 'Use this endpoint to fetch all agents logs except from admins, from the database || ** Roles: Admin, Moderator, Supervisor **' })
     @ApiResponse({ status: 200, description: 'All the agents logs were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -139,7 +139,7 @@ export class AgentsController {
 
     @ApiBearerAuth()
     @Patch(':agentId/new_role')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
     @ApiOperation({ summary: 'Use this endpoint to update the role of an agent, based on the body. || ** Roles: Admin, Moderator, Supervisor **' })
     @ApiParam({
         name: 'agentId', 
@@ -165,8 +165,8 @@ export class AgentsController {
         const updatedRoleForAgent = await this.agentService.updateRoleForAgents(updateRoleDto, userId)
 
         if (updatedRoleForAgent) {
-            console.log(`the role for this agent, ${updatedRoleForAgent.agentName}, has updated to: ${updatedRoleForAgent.role.role_description}` )
-            res.status(200).json({ message: `The role for this agent ${updatedRoleForAgent.agentName} has updated to: ${updatedRoleForAgent.role.role_description}`})
+            console.log(`the role for this agent, ${updatedRoleForAgent.userName}, has updated to: ${updatedRoleForAgent.role.role_description}` )
+            res.status(200).json({ message: `The role for this agent ${updatedRoleForAgent.userName} has updated to: ${updatedRoleForAgent.role.role_description}`})
         }
         else return res.status(400).json({ message: 'The role was not updated for the agent, check the body' })
     }
@@ -235,7 +235,7 @@ export class AgentsController {
 
     @ApiBearerAuth()
     @Delete(':agentId')
-    @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
+   // @Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
     @ApiOperation({ summary: 'Use this endpoint to delete a single agent || ** Roles: Admin, Moderator **' })
     @ApiParam({ name: 'agentId', schema: 
         { type: 'string', format: 'uuid', example: '224f77e3-17b2-4521-a971-567b72653b4d', description: 'Unique identifier for the resource' }, 

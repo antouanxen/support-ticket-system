@@ -1,46 +1,65 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateEngineerDto } from '../dtos/create-engineer.dto';
-import { engineer } from '@prisma/client';
+import { engineer, user } from '@prisma/client';
 import prisma from 'prisma/prisma_Client';
 import { UpdateEngineerDto } from '../dtos/update-engineer.dto';
 import { EngineerTicketsService } from './engineer-tickets.service';
+import { CategoryService } from 'src/category/provider/category.service';
 
 @Injectable()
 export class EngineerService {
     constructor(
-        private readonly engineerTicketsService: EngineerTicketsService
+        private readonly engineerTicketsService: EngineerTicketsService,
+        private readonly categoryService: CategoryService,
     ) {}
 
-    public async createEngineer(createEngineerDto: CreateEngineerDto, userId: string): Promise<engineer | { message: string }> {
+    public async createEngineer(createEngineerDto: CreateEngineerDto, userId: string): Promise<Partial<CreateEngineerDto> | { message: string }> {
         const agentId = userId
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const existingEngineer = await prisma.engineer.findUnique({
-                where: { engineer_email: createEngineerDto.engineer_email }
+            const existingEngineer = await prisma.user.findUnique({
+                where: { userEmail: createEngineerDto.engineer_email }
             })
 
             if (existingEngineer) return { message: 'The email already exists for an engineer.' };
+
+            const category = await this.categoryService.getSingleCategoryByName(createEngineerDto.category)
             
-            const newEngineer = await prisma.engineer.create({
+            const newEngineer = await prisma.user.create({
                 data: {
-                    engineer_name: createEngineerDto.engineer_name,
-                    engineer_email: createEngineerDto.engineer_email,
+                    userName: createEngineerDto.engineer_name ?? (createEngineerDto.engineer_email.split('@')[0] || 'new-user'),
+                    userEmail: createEngineerDto.engineer_email,
+                    userPassword: createEngineerDto.engineer_password
                 }
             })
 
-            return newEngineer
+            const newEngineerWithCategory = await prisma.engineer.create({
+                data: {
+                    userId: newEngineer.id,
+                    engineerOwnEmail: createEngineerDto.engineerOwnEmail ?? null,
+                    categoryId: category.id
+                }
+            })
+
+            return new CreateEngineerDto({
+                engineer_name: newEngineer.userName,
+                engineer_email: newEngineer.userEmail,
+                engineerOwnEmail: newEngineerWithCategory.engineerOwnEmail,
+                category: createEngineerDto.category
+            })
         } catch(err) {
             console.log('Engineer was not created', err)
             throw new InternalServerErrorException('There was an error with the server creating the engineer. Try again')
         }
-    }
+    } 
 
-    public async findSingleEngineer(engineer_id: string): Promise<engineer> {
+    public async findSingleEngineer(engineerId: string): Promise<engineer> {
         try {
             const singleEngineer = await prisma.engineer.findUnique({ 
-                where: { engineer_id: engineer_id }
+                where: { userId: engineerId },
+                include: { user: true }
             })
 
             if (!singleEngineer) throw new NotFoundException('That engineer does not exist in the database')
@@ -69,44 +88,45 @@ export class EngineerService {
         }
     }
 
-    public async updateAnEngineerStats(updateEngineerDto: UpdateEngineerDto, userId: string): Promise<Partial<engineer>> {
+    public async updateAnEngineerStats(updateEngineerDto: UpdateEngineerDto, userId: string) {
         const agentId = userId
-        const { engineer_id, engineer_email, engineer_name } = updateEngineerDto
+        const { engineerId, engineer_email, engineer_name } = updateEngineerDto
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const engineerToBeUpdated = await prisma.engineer.findUnique({ where: { engineer_id: updateEngineerDto.engineer_id } })
+            const engineerToBeUpdated = await prisma.engineer.findUnique({ where: { userId: engineerId }, include: { user: true } })
             if (!engineerToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
 
-            const updatedEngineer = await prisma.engineer.update({ 
-                where: { engineer_id: engineerToBeUpdated.engineer_id },
+            const updatedEngineer = await prisma.user.update({ 
+                where: { id: engineerToBeUpdated.userId },
                 data: {
-                    engineer_name: engineer_name ?? engineerToBeUpdated.engineer_name,
-                    engineer_email: engineer_email ?? engineerToBeUpdated.engineer_email,
-                }
+                    userName: engineer_name ?? engineerToBeUpdated.user.userName,
+                    userEmail: engineer_email ?? engineerToBeUpdated.user.userEmail,
+                },
+                
             })
 
             return updatedEngineer
         } catch(err) {
-            console.log(`error updating the stats for engineer with ID: ${engineer_id}`)
+            console.log(`error updating the stats for engineer with ID: ${engineerId}`)
             throw new InternalServerErrorException('There was an error updating the agent stats. Must be the server, try again.')
         }
     }
 
-    public async deleteEngineer(engineer_id: string, userId: string) {
+    public async deleteEngineer(engineerId: string, userId: string) {
         const agentId = userId
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
             const engineerToBeDeleted = await prisma.engineer.findUnique({
-                where: { engineer_id: engineer_id }
+                where: { engineerId: engineerId }
             })
 
             if (!engineerToBeDeleted) throw new NotFoundException('Engineer not found');
 
-            await prisma.engineer.delete({ where: { engineer_id: engineer_id } })
+            await prisma.engineer.delete({ where: { engineerId: engineerId } })
 
             return;
         } catch(err) {
@@ -115,7 +135,7 @@ export class EngineerService {
         }      
     }
 
-    public async getEngineerTicket(newTicket_id: string, engineer_id: string) {
-        return await this.engineerTicketsService.getEngineerTicket(newTicket_id, engineer_id)
+    public async getEngineerTicket(newTicket_id: string, engineerId: string) {
+        return await this.engineerTicketsService.getEngineerTicket(newTicket_id, engineerId)
     }
 }
