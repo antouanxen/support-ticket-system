@@ -6,25 +6,25 @@ import { Status } from 'src/ticket/enum/status.enum';
 export class EngineerTicketsService {
     constructor() {}
 
-    public async getEngineerTicket(newTicket_id: string, engineerId: string) {
+    public async getEngineerTicket(newTicketCustomId: string, engineerId: string) {
         const engineerExists = await prisma.engineer.findUnique({
             where: { engineerId: engineerId }
         });
     
         if (!engineerExists) throw new NotFoundException('Engineer not found.');
     
-        await prisma.engineer_tickets.create({ 
+        await prisma.assigned_engineers.create({ 
             data: {
-                ticketId: newTicket_id,
+                ticketCustomId: newTicketCustomId,
                 engineerId: engineerExists.engineerId
             }
         })
 
         await prisma.ticket.update({ 
-            where: { id: newTicket_id },
+            where: { customTicketId: newTicketCustomId },
             data: { status: Status.IN_PROGRESS } 
         })
 
-        console.log('Φτιαχτηκε μια σχεση μεταξυ engineer και ticket και ενημερωθηκε το status σε in-progress')
+        console.log('Φτιαχτηκε μια σχεση μεταξυ engineer και ticket, και ενημερωθηκε το status σε in-progress')
     }
 }

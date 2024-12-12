@@ -59,7 +59,13 @@ export class EngineerService {
         try {
             const singleEngineer = await prisma.engineer.findUnique({ 
                 where: { userId: engineerId },
-                include: { user: true }
+                include: {
+                    asUser: {
+                        select: {
+                            id: true, userName: true, userEmail: true
+                        }
+                    } 
+                }
             })
 
             if (!singleEngineer) throw new NotFoundException('That engineer does not exist in the database')
@@ -71,14 +77,22 @@ export class EngineerService {
         }
     } 
 
-    public async findAllEngineers(userId: string): Promise<engineer[]> {
+    public async findAllEngineers(userId: string) {
         const agentId = userId
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const allEngineers = await prisma.engineer.findMany({
-                include: { engineer_tickets: true }
+            const allEngineers = await prisma.user.findMany({
+                where: { engineer: { isNot: null } },
+                select: { 
+                    id: true,
+                    userName: true,
+                    userEmail: true,
+                    last_logged_at: true,
+                    role: { select: { role_description: true } },
+                    engineer: { select: { assigned_engineers: { select: { ticketCustomId: true } } } }
+                }
             }) 
 
             return allEngineers
@@ -95,14 +109,14 @@ export class EngineerService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const engineerToBeUpdated = await prisma.engineer.findUnique({ where: { userId: engineerId }, include: { user: true } })
+            const engineerToBeUpdated = await prisma.engineer.findUnique({ where: { userId: engineerId }, include: { asUser: true } })
             if (!engineerToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
 
             const updatedEngineer = await prisma.user.update({ 
                 where: { id: engineerToBeUpdated.userId },
                 data: {
-                    userName: engineer_name ?? engineerToBeUpdated.user.userName,
-                    userEmail: engineer_email ?? engineerToBeUpdated.user.userEmail,
+                    userName: engineer_name ?? engineerToBeUpdated.asUser.userName,
+                    userEmail: engineer_email ?? engineerToBeUpdated.asUser.userEmail,
                 },
                 
             })
@@ -135,7 +149,7 @@ export class EngineerService {
         }      
     }
 
-    public async getEngineerTicket(newTicket_id: string, engineerId: string) {
-        return await this.engineerTicketsService.getEngineerTicket(newTicket_id, engineerId)
+    public async getEngineerTicket(newTicketCustomId: string, engineerId: string) {
+        return await this.engineerTicketsService.getEngineerTicket(newTicketCustomId, engineerId)
     }
 }

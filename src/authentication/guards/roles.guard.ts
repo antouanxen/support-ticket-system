@@ -20,10 +20,10 @@ export class RolesGuard implements CanActivate {
 
     const userAgent = await prisma.agent.findUnique({
       where: { userId: userId },
-      include: { user: { include: { role: true } } }
+      include: { asUser: { include: { role: true } } }
     })
 
-    const hasValidRole = requiredRoles.includes(userAgent?.user?.role.role_description as AuthRoles)
+    const hasValidRole = requiredRoles.includes(userAgent?.asUser?.role.role_description as AuthRoles)
     
     if (!hasValidRole) { 
       console.log(`Access denied: User does not have any of the required roles: ${requiredRoles.join(', ')}`)

@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from "class-validator"
+import { IsArray, IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from "class-validator"
 import { PriorityLevel } from "../enum/priority.enum"
 import { Status } from "../enum/status.enum"
 import { Categories } from "src/category/enums/categories.enum"
@@ -28,7 +28,8 @@ export class CreateTicketDto {
     status?: Status  
 
     @IsOptional()
-    @IsUUID()
+    @IsArray()
+    @IsString({ each: true })
     engineerIds?: string | string[]
 
     @IsOptional()
@@ -37,6 +38,6 @@ export class CreateTicketDto {
     featuredImageUrl?: string | null
 
     @IsOptional()
-    @IsUUID()
-    dependent_ticketId?: string | null
+    @IsString()
+    dependent_ticketCustomId?: string | null
 }

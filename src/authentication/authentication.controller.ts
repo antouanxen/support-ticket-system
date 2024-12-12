@@ -3,7 +3,7 @@ import { AuthenticateService } from './providers/authenticate.service';
 import { SignInDto } from './dtos/signIn.dto';
 import { SignUpDto } from './dtos/signUp.dto';
 import { Request, Response } from 'express';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsPublic } from './decorators/is-public.decorator';
 import prisma from 'prisma/prisma_Client';
 
@@ -24,6 +24,7 @@ export class AuthenticationController {
             email: { type: 'string', example: 'jack@mcjim.com', description: 'The email of the user' },
             password: { type: 'string', example: 'Password123#', description: 'The password of the user, hashed by bcrypt' },
             role: { type: 'string', enum: ['engineer', null], default: null , description: 'The role of the user, can be either "engineer" or null(for an ordinary agent). This field leads to each user taking different roles and getting stored separately in the database.' },
+            category: { type: ' string', example: 'billing', description: 'The category for the user(that is made an "engineer". '},
             agentOwnEmail: { type: 'string', example: 'a@b.com', description: 'The personal email of the user(to be Agent), is completely optional' },
             engineerOwnEmail: { type: 'string', example: 'c@d.com', description: 'The personal email of the user(to be Engineer), is completely optional' },
         }, required: ['email', 'password'] }})
@@ -73,19 +74,16 @@ export class AuthenticationController {
         } else return res.status(401).json({ message: 'Password is not right. Put the correct password.' })
     } 
 
-    @Post('sign_off/:userId')
+    @Post('sign_off')
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Use this endpoint to sign off a user Agent from the app' })
-    @ApiParam({
-        name: 'userId', 
-        schema: { type: 'string', example: 'ff4cb519-7a04-4bb3-8610-37fbf49226ec', description: 'Parameter for the api. The ID of the user agent.' } })
     @ApiResponse({ status: 200, description: 'A user agent logs out and has his token version incremented by 1.' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not log out that user agent'})
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async signOff(@Param('userId') userId: string, @Req() req: Request, @Res() res: Response) {
+    public async signOff(@Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
-        userId = user.sub
+        const userId = user.sub
 
         console.log('Αποσυνδεεις ενα χρηστη')
         const result = await this.authenticateService.signOff(userId)

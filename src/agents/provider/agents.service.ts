@@ -29,7 +29,6 @@ export class AgentsService {
                     userEmail: true,
                     last_logged_at: true,
                     role: { select: { role_description: true } },
-                    agent: true
                 }
             }) 
 
@@ -54,7 +53,6 @@ export class AgentsService {
                     userEmail: true,
                     last_logged_at: true,
                     role: { select: { role_description: true } },
-                    agent: true 
                 }
             }) 
 
@@ -79,7 +77,6 @@ export class AgentsService {
                     userEmail: true,
                     last_logged_at: true,
                     role: { select: { role_description: true } },
-                    agent: true
                 },
                 orderBy: {
                     last_logged_at: 'desc'
@@ -98,11 +95,11 @@ export class AgentsService {
     public async getSingleAgent(agentIdTofind: string) {
         try {
             const agentToFind = await prisma.agent.findUnique({
-                where: { userId: agentIdTofind },
+                where: { agentId: agentIdTofind },
                 select: {
                     agentId: true,
                     agentOwnEmail: true, 
-                    user: {
+                    asUser: {
                         select: {
                             id: true,
                             userName: true,
@@ -135,11 +132,11 @@ export class AgentsService {
             const [supervisor, agentToGetAssigned] = await Promise.all([ 
                 prisma.agent.findUnique({ 
                     where: { userId: supervisorId },
-                    include: { user: true }
+                    include: { asUser: true }
                 }),
                 prisma.agent.findUnique({ 
                     where: { userId: agentIdToGetAssigned},
-                    include: { user: true } 
+                    include: { asUser: true } 
                 })
             ])   
 
@@ -190,12 +187,13 @@ export class AgentsService {
                 data : {
                     roleId: roleForAgent.role_id,
                     updated_at: new Date()
-                }
+                },
+                include: { role: true }
             })
 
             return updatedRoleForAgent
         } catch (err) {
-            console.log(`error updating role for agent with ID: ${agentIdForRole}`)
+            console.log(`error updating role for agent with ID: ${agentIdForRole}`, err)
             throw new InternalServerErrorException('There was an error updating the agent role. Must be the server, try again.')
         }
     }
@@ -209,15 +207,15 @@ export class AgentsService {
             
             if (approvedRequest && approvedRequest.requestForAgent === agentId) {
                 try {
-                    const agentToBeUpdated = await prisma.agent.findUnique({ where: { userId: agentId }, include: { user: true} })
+                    const agentToBeUpdated = await prisma.agent.findUnique({ where: { userId: agentId }, include: { asUser: true} })
                     if (!agentToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
         
                     const updatedAgentWithPerm = await prisma.user.update({ 
                         where: { id: agentToBeUpdated.userId },
                         data: {
-                            userName: approvedRequest.agentName ?? agentToBeUpdated.user.userName,
-                            userEmail: approvedRequest.agentEmail ?? agentToBeUpdated.user.userEmail,
-                            userPassword: approvedRequest.agentPassword ?? agentToBeUpdated.user.userPassword
+                            userName: approvedRequest.agentName ?? agentToBeUpdated.asUser.userName,
+                            userEmail: approvedRequest.agentEmail ?? agentToBeUpdated.asUser.userEmail,
+                            userPassword: approvedRequest.agentPassword ?? agentToBeUpdated.asUser.userPassword
                         }
                     })
     

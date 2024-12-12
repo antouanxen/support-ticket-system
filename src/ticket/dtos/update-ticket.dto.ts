@@ -2,11 +2,9 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validato
 import { Status } from "../enum/status.enum";
 
 export class UpdateTicketStatusDto {
-
-    @IsUUID()
     @IsString()
     @IsOptional()
-    ticketId: string
+    customId: string
 
     @IsEnum(Status)
     @IsNotEmpty()

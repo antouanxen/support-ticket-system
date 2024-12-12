@@ -22,7 +22,8 @@ async function bootstrap() {
     transformOptions: { enableImplicitConversion: true }
   }))
 
-  // Swagger Config
+  const port = process.env.PORT || 8080;
+    // Swagger Config
   const swagConfig = new DocumentBuilder()
   .setDescription(`Use the base API URL as http://localhost:8000. If it does not work ask Tony`)
   .setTermsOfService(`http://localhost:8000/api/terms-of-service`)
@@ -39,6 +40,6 @@ async function bootstrap() {
   })
      
 
-  await app.listen(8000);
+  await app.listen(port);
 }
 bootstrap();
