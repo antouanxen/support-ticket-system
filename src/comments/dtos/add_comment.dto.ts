@@ -7,7 +7,7 @@ export class AddCommentDto {
     content: string
     
     @IsOptional()
-    @IsUUID()
-    ticketId?: string
+    @IsString()
+    customId?: string
 
 }

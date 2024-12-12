@@ -28,12 +28,12 @@ export class AccessTokenGuard implements CanActivate {
           audience: this.jwtConfig.audience,
           issuer: this.jwtConfig.issuer
         })
-        const userAgent = payload?.sub ? await prisma.agent.findUnique({ 
-          where: { userId: payload.sub },
-          include: { user: { include: { role: true } } }
+        const user = payload?.sub ? await prisma.user.findUnique({ 
+          where: { id: payload.sub },
+          include: { role: true } 
         }) : null
 
-        if (!userAgent || userAgent.user.tokenVersion !== payload.tokenVersion) throw new UnauthorizedException('Token verification has failed. Try again.')
+        if (!user || user.tokenVersion !== payload.tokenVersion) throw new UnauthorizedException('Token verification has failed. Try again.')
   
         request.res.locals.user = payload
         console.log('payload', payload)
@@ -52,12 +52,12 @@ export class AccessTokenGuard implements CanActivate {
           audience: this.jwtConfig.audience,
           issuer: this.jwtConfig.issuer
         })
-        const userAgent = payload?.sub ? await prisma.agent.findUnique({ 
-          where: { userId: payload.sub },
-          include: { user: { include: { role: true } } }
+        const user = payload?.sub ? await prisma.user.findUnique({ 
+          where: { id: payload.sub },
+          include: { role: true } 
         }) : null
 
-        if (!userAgent || userAgent.user.tokenVersion !== payload.tokenVersion) throw new UnauthorizedException('Token verification has failed. Try again.')
+        if (!user || user.tokenVersion !== payload.tokenVersion) throw new UnauthorizedException('Token verification has failed. Try again.')
 
         request.res.locals.user = payload     
         console.log('payload', payload)

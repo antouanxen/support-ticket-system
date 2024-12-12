@@ -32,9 +32,9 @@ export class SignUpDto {
     @IsEmail()
     engineerOwnEmail?: string;
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    category: string
+    category?: string
 
     constructor(partial: Partial<SignUpDto>) {
         Object.assign(this, partial);

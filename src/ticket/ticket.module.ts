@@ -11,12 +11,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { EngineerModule } from 'src/engineer/engineer.module';
 import { DependentTicketService } from './provider/dependent-ticket.service';
 import { GenerateCustomTicketIdService } from './provider/generate-custom-ticket-id.service';
-import { AssignTicketsByCatsToEngService } from './provider/assign-tickets-by-cats-to-eng.service';
+import { AssignTicketsByCatToEngsService } from './provider/assign-tickets-by-cat-to-engs.service';
 
 @Module({
   imports: [CommentsModule, CategoryModule, CustomerModule, EngineerModule, ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
   controllers: [TicketController],
-  providers: [TicketService, MetricsService, DependentTicketService, GenerateCustomTicketIdService, AssignTicketsByCatsToEngService],
+  providers: [TicketService, MetricsService, DependentTicketService, GenerateCustomTicketIdService, AssignTicketsByCatToEngsService],
   exports: [TicketService]
 })
 export class TicketModule {}

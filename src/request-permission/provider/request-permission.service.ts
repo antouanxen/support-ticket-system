@@ -40,17 +40,17 @@ export class RequestPermissionService {
 
             const agentRequesting = await prisma.agent.findUnique({ 
                 where: { userId: assignedAgents.supervisors_agents_assignedAsAgent.agentId },
-                include: { user: true }
+                include: { asUser: true }
             })
 
             const agentRequestingSupervisor = await prisma.agent.findUnique({ 
                 where: { userId: assignedAgents.supervisors_agents_assignedAsSupervisor.agentId },
-                include: { user: true }
+                include: { asUser: true }
             })
 
             const newRequestEmailData: NewRequestEmailData = {
-                agentEmail: agentRequesting.user.userEmail,
-                agentName: agentRequesting.user.userName, 
+                agentEmail: agentRequesting.asUser.userEmail,
+                agentName: agentRequesting.asUser.userName, 
                 requestType: newRequestForLeave.requestType,
                 request_id: newRequestForLeave.request_id
             }
@@ -58,12 +58,12 @@ export class RequestPermissionService {
             console.log('πηγε το εμαιλ για το νεο request')
 
             const agentRequestToSVEmailData : AgentRequestToSVEmailData = {
-                agentEmail: agentRequestingSupervisor.user.userEmail,
-                agentName: agentRequestingSupervisor.user.userName, 
+                agentEmail: agentRequestingSupervisor.asUser.userEmail,
+                agentName: agentRequestingSupervisor.asUser.userName, 
                 requestType: newRequestForLeave.requestType,
                 request_id: newRequestForLeave.request_id,
-                agentIdRequested: agentRequesting.user.id,
-                agentEmailRequested: agentRequesting.user.userEmail                
+                agentIdRequested: agentRequesting.asUser.id,
+                agentEmailRequested: agentRequesting.asUser.userEmail                
             }
             await this.mailService.sendEmailForAgentRequestToSV(agentRequestToSVEmailData)
             console.log('πηγε το εμαιλ για το νεο request για εξεταση στον supervisor')
@@ -98,17 +98,17 @@ export class RequestPermissionService {
 
             const agentRequesting = await prisma.agent.findUnique({ 
                 where: { userId: assignedAgents.supervisors_agents_assignedAsAgent.agentId },
-                include: { user: true }
+                include: { asUser: true }
             })
 
             const agentRequestingSupervisor = await prisma.agent.findUnique({ 
                 where: { userId: assignedAgents.supervisors_agents_assignedAsSupervisor.agentId },
-                include: { user: true }
+                include: { asUser: true }
             })
 
             const newRequestEmailData: NewRequestEmailData = {
-                agentEmail: agentRequesting.user.userEmail,
-                agentName: agentRequesting.user.userName, 
+                agentEmail: agentRequesting.asUser.userEmail,
+                agentName: agentRequesting.asUser.userName, 
                 requestType: newRequestForStatsUpdate.requestType,
                 request_id: newRequestForStatsUpdate.request_id
             }
@@ -116,12 +116,12 @@ export class RequestPermissionService {
             console.log('πηγε το εμαιλ για το νεο request')
 
             const agentRequestToSVEmailData : AgentRequestToSVEmailData = {
-                agentEmail: agentRequestingSupervisor.user.userEmail,
-                agentName: agentRequestingSupervisor.user.userName, 
+                agentEmail: agentRequestingSupervisor.asUser.userEmail,
+                agentName: agentRequestingSupervisor.asUser.userName, 
                 requestType: newRequestEmailData.requestType,
                 request_id: newRequestEmailData.request_id,
-                agentIdRequested: agentRequesting.user.id,
-                agentEmailRequested: agentRequesting.user.userEmail                
+                agentIdRequested: agentRequesting.asUser.id,
+                agentEmailRequested: agentRequesting.asUser.userEmail                
             }
             await this.mailService.sendEmailForAgentRequestToSV(agentRequestToSVEmailData)
             console.log('πηγε το εμαιλ για το νεο request για εξεταση στον supervisor')
@@ -161,7 +161,7 @@ export class RequestPermissionService {
                     requestedByAgent: {
                         select: {
                             agentId: true, 
-                            user: {
+                            asUser: {
                                 select: {
                                     id: true,
                                     userEmail: true,
@@ -173,11 +173,11 @@ export class RequestPermissionService {
                 }
             })
 
-            const agentWhoRequested = await prisma.agent.findUnique({ where: { agentId: request.requestedByAgent.agentId }, include: { user: true } }) 
+            const agentWhoRequested = await prisma.agent.findUnique({ where: { agentId: request.requestedByAgent.agentId }, include: { asUser: true } }) 
             const updateValidationEmailData : UpdateValidationEmailData = {
                 agentId: agentWhoRequested.agentId,  
-                agentEmail: agentWhoRequested.user.userEmail,
-                agentName: agentWhoRequested.user.userName, 
+                agentEmail: agentWhoRequested.asUser.userEmail,
+                agentName: agentWhoRequested.asUser.userName, 
                 request_id: request.request_id,
                 requestType: request.requestType,
                 request_status: request.request_status,            
@@ -260,7 +260,7 @@ export class RequestPermissionService {
                     requestedByAgent: { 
                         select: {
                             agentId: true, 
-                            user: {
+                            asUser: {
                                 select: {
                                     id: true,
                                     userEmail: true,

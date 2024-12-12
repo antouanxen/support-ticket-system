@@ -60,6 +60,7 @@ export class AgentsController {
         } else return res.status(404).json({ message: 'No agents with roles were found' })
     }
 
+    @ApiBearerAuth()
     @Get('logs')
     //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR, AuthRoles.SUPERVISOR])
     @ApiOperation({ summary: 'Use this endpoint to fetch all agents logs except from admins, from the database || ** Roles: Admin, Moderator, Supervisor **' })
@@ -87,7 +88,7 @@ export class AgentsController {
     @ApiOperation({ summary: 'Use this endpoint to fetch a single agent from the database ' })
     @ApiParam({
         name: 'agentId', 
-        schema: { type: 'string', format: 'UUID', example: 'ff4cb519-7a04-4bb3-8610-37fbf49226ec', description: 'Parameter for the api. The ID of the agent you wish to find' }
+        schema: { type: 'string', format: 'UUID', example: '470ebd63-b60b-4b5f-b3f9-4e9728c8341a', description: 'Parameter for the api. The ID of the agent' }
     })
     @ApiResponse({ status: 200, description: 'A single agent was fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -155,7 +156,7 @@ export class AgentsController {
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'That role or agent was not found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async updateAgentRole(@Param('id') agentIdForRole: string, @Body() updateRoleDto: UpdateRoleForAgentDto, @Req() req: Request, @Res() res: Response) {
+    public async updateAgentRole(@Param('agentId') agentIdForRole: string, @Body() updateRoleDto: UpdateRoleForAgentDto, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
 
@@ -164,9 +165,9 @@ export class AgentsController {
         console.log('Ενημερωνεις ενα role για εναν agent')
         const updatedRoleForAgent = await this.agentService.updateRoleForAgents(updateRoleDto, userId)
 
-        if (updatedRoleForAgent) {
-            console.log(`the role for this agent, ${updatedRoleForAgent.userName}, has updated to: ${updatedRoleForAgent.role.role_description}` )
-            res.status(200).json({ message: `The role for this agent ${updatedRoleForAgent.userName} has updated to: ${updatedRoleForAgent.role.role_description}`})
+        if (updatedRoleForAgent && updatedRoleForAgent.role) {
+            console.log(`the role for agent: '${updatedRoleForAgent.userName}', has updated to: '${updatedRoleForAgent.role.role_description}' ` )
+            res.status(200).json({ message: `The role for agent: '${updatedRoleForAgent.userName}' has updated to: '${updatedRoleForAgent.role.role_description}' `})
         }
         else return res.status(400).json({ message: 'The role was not updated for the agent, check the body' })
     }
@@ -224,7 +225,7 @@ export class AgentsController {
             const axiosResponse = await axios.post(`${process.env.BASE_URL}/agents/${agentId}/new_stats/${request_id}`)
     
             if (axiosResponse) {
-                console.log('Κανεις redirect μετα απο την ενημερωση ενος agent τα stats απο το εμαιλ')
+                console.log('Κανεις redirect μετα απο την ενημερωση των stats ενος agent απο το εμαιλ')
                 return res.redirect(`${process.env.BASE_URL}/agents/${agentId}`)
             }
         } catch (err) {

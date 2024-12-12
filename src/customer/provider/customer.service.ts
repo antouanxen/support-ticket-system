@@ -75,7 +75,10 @@ export class CustomerService {
 
             return singleCustomer
         } catch(err: any) {
-            console.log('Could not find the customer', err)
+            if (err instanceof NotFoundException){
+                throw err
+            }
+            console.log('Could not find the customer:', err.message)
             throw new InternalServerErrorException('There was an error with the server. Try again')
         }
     }

@@ -66,7 +66,7 @@ export class EngineerController {
     @ApiOperation({ summary: 'Use this endpoint to fetch a single engineer by its ID from the database' })
     @ApiParam({
         name: 'engineerId', 
-        schema: { type: 'string', format: 'UUID', example: '92a04c73-05b2-4cd5-9513-66e623c6a41a', description: 'Parameter for the api. The ID of the engineer you wish to find' }
+        schema: { type: 'string', format: 'UUID', example: '102fcad9-6ac3-4151-aa27-49c0726609a6', description: 'Parameter for the api. The ID of the engineer' }
     })
     @ApiResponse({ status: 200, description: 'A single engineer was fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -79,14 +79,14 @@ export class EngineerController {
         if (singleEng) {
             console.log('Οριστε o ταδε engineer')
             return res.status(200).json(singleEng)
-        } else return res.status(404).json({ message: 'That role was not found' })
+        } else return res.status(404).json({ message: 'That engineer was not found' })
     }
 
     @Patch(':engineerId')
     @ApiOperation({ summary: 'Use this endpoint to update an engineer based on the body' })
     @ApiParam({
         name: 'engineerId', 
-        schema: { type: 'string', format: 'UUID', example: '92a04c73-05b2-4cd5-9513-66e623c6a41a', description: 'Parameter for the api. The id of the engineer' }
+        schema: { type: 'string', format: 'UUID', example: '92a04c73-05b2-4cd5-9513-66e623c6a41a', description: 'Parameter for the api. The ID of the engineer' }
     })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
