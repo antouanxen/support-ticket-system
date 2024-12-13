@@ -28,8 +28,8 @@ export class TicketController {
             categoryName: { type: 'string', example: 'billing', description: 'A category summary of the ticket issued, maybe you need to create a category first if you cannot find one you need'},
             status: { type: 'string', default: 'pending', description: 'An enum for the status of the ticket issued, use the example options as shown'},
             featuredImageUrl: { type: 'string/url', example: 'http://localhost.com/images/image1.jpg', description: 'An image url for the ticket' },
-            engineerIds: { type: 'array', items: { type: 'string', format: 'uuid', example: '927604c3-49ad-4a78-8c81-55324edd615b' }, description: 'The ID of an engineer. It can also be an array of multiple engineer IDs, dependent on the ticket you are creating. Optional.' },
-            dependent_ticketCustomId: { type: 'string', example: 'BI-000001', description: 'The ID of a different ticket, dependent on the one you are creating. Optional.' }
+            engineerIds: { type: 'array', items: { type: 'string', format: 'uuid', example: '102fcad9-6ac3-4151-aa27-49c0726609a6' }, description: 'The ID of an user (engineer). It can also be an array of multiple engineer IDs, dependent on the ticket you are creating. Optional.' },
+            dependent_ticketCustomId: { type: 'string', example: 'BI-000010', description: 'The ID of a different ticket, dependent on the one you are creating. Optional.' }
         }, required: ['c_name', 'priority', 'status', 'categoryName'] }, })
     @ApiResponse({ status: 201, description: 'A ticket is created successfully and gets stored in the database' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not create that ticket'})
@@ -51,32 +51,35 @@ export class TicketController {
     } 
 
     @ApiBearerAuth()
-    @Post(':customId/assign_eng')
+    @Patch(':customId/assign_eng')
     @ApiOperation({ summary: 'Use this endpoint to assign a ticket to an engineer, and also send a new email based on the body' })
     @ApiParam({
         name: 'customId', 
-        schema: { type: 'string', example: 'BI-000001', description: 'Parameter for the api. The custom ID of the ticket' }
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The custom ID of the ticket' }
     })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
         schema: { type: 'object', properties: {
-            engineerIds: { type: 'array', items: { type: 'string', format: 'uuid', example: '927604c3-49ad-4a78-8c81-55324edd615b' }, description: 'The ID of an engineer. It can also be an array of multiple engineer IDs, dependent on the ticket you are creating.' },
+            engineerIds: { type: 'array', items: { type: 'string', format: 'uuid', example: '49ce5736-8a36-43de-826c-d141fcd53a3a' }, description: 'The ID of an user (engineer). It can also be an array of multiple engineer IDs, dependent on the ticket you are creating.' },
         }, required: ['engineerIds'] }, })
     @ApiResponse({ status: 200, description: 'A ticket is assigned successfully to an engineer and gets stored in the database' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not assign that ticket'})
     @ApiResponse({ status: 404, description: 'Not found. Could not find that ticket or the engineer.'})
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async assignTicketToEng(@Param('customId') customId: string, @Body() engineerIds: string[], @Req() req: Request, @Res() res: Response) {
+    public async assignTicketToEng(@Param('customId') customId: string, @Body() body: { engineerIds: string[] }, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
+        
 
         console.log('Kάνεις ενα ticket assign σε εναν engineer')
-        const ticketAssigned = await this.ticketService.assignTicketToEng(customId, engineerIds, userId)
+
+       
+        const ticketAssigned = await this.ticketService.assignTicketToEng(customId, body.engineerIds, userId)
 
         if (ticketAssigned) {
             console.log('ticket was assigned')
-            return res.status(200).json({ message: `The ticket (ID: ${customId}) was assigned to the engineer/s (ID/s: ${engineerIds})`})
+            return res.status(200).json({ message: `The ticket (ID: ${customId}) was assigned to the engineer/s (ID/s: ${body.engineerIds})`})
         }  else return res.status(400).json({ message: 'The ticket was not assigned, check the body' })
     }
 
@@ -133,7 +136,7 @@ export class TicketController {
     @ApiOperation({ summary: 'Use this endpoint to fetch a ticket from the database' })
     @ApiParam({
         name: 'customId', 
-        schema: { type: 'string', example: 'BI-000001', description: 'Parameter for the api. The ID of the ticket' }
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
     })
     @ApiResponse({ status: 200, description: 'A ticket is fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
@@ -159,7 +162,7 @@ export class TicketController {
     @ApiOperation({ summary: 'Use this endpoint to update a ticket status plus make a comment, based on the body' })
     @ApiParam({
         name: 'customId', 
-        schema: { type: 'string', example: 'BI-000001', description: 'Parameter for the api. The ID of the ticket' }
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
     })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
@@ -199,7 +202,7 @@ export class TicketController {
     @ApiOperation({ summary: 'Use this endpoint to create a comment based on the body' })
     @ApiParam({
         name: 'customId', 
-        schema: { type: 'string', example: 'BI-000001', description: 'Parameter for the api. The ID of the ticket' }
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
     })
     @ApiBody({
         description: 'Fill the body requirements as shown below',

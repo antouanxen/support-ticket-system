@@ -48,7 +48,7 @@ export class EngineerController {
     @ApiResponse({ status: 404, description: 'No engineers were found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })  
     public async getAllEngineers(@Req() req: Request, @Res() res: Response) {
-        console.log('Εδω παιρνεις ολα τους engineers')
+        console.log('Εδω παιρνεις ολους τους engineers')
         const user = req.res.locals.user
         const userId = user.sub
 

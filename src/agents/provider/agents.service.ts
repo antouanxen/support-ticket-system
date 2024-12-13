@@ -184,7 +184,7 @@ export class AgentsService {
 
             const updatedRoleForAgent = await prisma.user.update({
                 where: { id: agentToUpdateRole.userId},
-                data : {
+                data: {
                     roleId: roleForAgent.role_id,
                     updated_at: new Date()
                 },
