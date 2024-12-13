@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateTicketDto } from '../dtos/create-ticket.dto';
 import { comment, ticket } from '@prisma/client';
 import prisma from 'prisma/prisma_Client';
@@ -29,7 +29,7 @@ export class TicketService {
         private readonly dependentTicketService: DependentTicketService,
         private readonly mailService: MailService,
         private readonly generateCustomTicketIdService: GenerateCustomTicketIdService,
-        private readonly assignTicketsByCatsToEngService: AssignTicketsByCatToEngsService,
+        private readonly assignTicketsByCatToEngsService: AssignTicketsByCatToEngsService,
     ) {}
 
     public async createTicket(createTicketDto: CreateTicketDto, userId: string): Promise<ticket> {
@@ -77,7 +77,7 @@ export class TicketService {
                 await this.assignTicketToEng(newTicket.customTicketId, engineerIds, userId);
             } else if (engineerIds === undefined) {
                 console.log(`Δεν βρεθηκε engineer, προχωραει η αυτοματη αναθεση αναλογα το priority level`);
-                const availableEngs = await this.assignTicketsByCatsToEngService.assignTicketsByCatToEngs(priority, categoryName, newTicket.id);
+                const availableEngs = await this.assignTicketsByCatToEngsService.assignTicketsByCatToEngs(priority, categoryName, newTicket.id);
     
                 if (availableEngs === undefined) {
                     console.log('Δεν έγινε αυτόματη ανάθεση.');
@@ -119,19 +119,26 @@ export class TicketService {
         const ticket = await prisma.ticket.findUnique({ where: { customTicketId: customId }, include: { customer: true } })
             
         if (!ticket) throw new NotFoundException('Ticket does not exist')
+            
+        const ticketAlreadyAssignedToEng = await Promise.all(engineerIds.map(async (engId) => {
+            return prisma.assigned_engineers.findUnique({ where: {
+                ticketCustomId_engineerId: {
+                    engineerId: engId,
+                    ticketCustomId: customId
+                }
+            }})
+        }))
+           
+        if (ticketAlreadyAssignedToEng) throw new ConflictException('Ticket is already assigned to that engineer. Pick a different one')
         
-        if (engineerIds.length > 0) {    
+        if (engineerIds.length > 0 && engineerIds.every(id => isUUID(id))) {    
             try {
                 const userEngineers = await prisma.user.findMany({ 
-                    where: {
-                        engineer: {
-                            is: {
-                                engineerId: {
-                                    in: Array.isArray(engineerIds) ? engineerIds : [engineerIds] 
-                                }  
-                            } 
-                        }
-                    },
+                    where: {  
+                        id: {
+                            in: Array.isArray(engineerIds) ? engineerIds : [engineerIds] 
+                        }  
+                    },   
                     include: { engineer: true }
                 })
 
@@ -151,15 +158,16 @@ export class TicketService {
                         priority: ticket.priority
                     }
 
-                    //await this.mailService.sendEmailForNewTicket(newTicketEmailData)
+                    await this.mailService.sendEmailForNewTicket(newTicketEmailData)
                     console.log('πηγε το εμαιλ για το νεο ticket')    
-                    console.log(`Φτιαχτηκε μια σχεση με τον engineer με ID: ${userEngineer.id} και το ticket με ID: ${ticket.customTicketId}`)
+                    console.log(`Φτιαχτηκε μια σχεση με τον engineer με ID: ${userEngineer.engineer.engineerId} και το ticket με ID: ${ticket.customTicketId}`)
                 }))
                 
                 return true
             } catch (err) {
                 if (err instanceof BadRequestException) throw err
                 else if (err instanceof NotFoundException) throw err
+                else if (err instanceof ConflictException) throw err
 
                 console.log('ticket was not created due to engineer assignment issue', err)
                 throw new InternalServerErrorException('There was an error with the server. Try again')
@@ -304,7 +312,7 @@ export class TicketService {
         }
     }
 
-    public async addNewCommentForTicket(addCommentDto: AddCommentDto, userId: string): Promise<comment> {
+    public async addNewCommentForTicket(addCommentDto: AddCommentDto, userId: string) {
         const { content, customId } = addCommentDto
 
         const agentId = userId
@@ -320,7 +328,7 @@ export class TicketService {
             }
 
             const newComment = await this.commentsService.AddComment(content, customId, userId)
-            return newComment
+            return newComment              
         } catch(err) {
             console.log('Error creating the comment', err)
             throw new InternalServerErrorException('Comment was not created due to server error')

@@ -10,7 +10,7 @@ export class AppController {
   @Get()
   @IsPublic(true)
   getHello(@Res() res: Response) {
-    res.send('hello')
+    res.send('hello fellow <i>Smart Up</i> dudes')
   }
     
 }

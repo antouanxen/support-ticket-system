@@ -18,8 +18,8 @@ export class MailService {
         const { userId, userEmail, userName } = data
         const baseUrl = process.env.BASE_URL
         await this.mailerService.sendMail({
-            to: userEmail,
-            from: `Support Team <no-reply@support-ticket-team.com>`,
+            to: 'axenakis@smartupweb.com',
+            from: `Support Team <info@smartupweb.com>`,
             subject: 'Welcome To The Team',
             template: './layout',
             context: {
@@ -36,7 +36,7 @@ export class MailService {
         const baseUrl = process.env.BASE_URL
         await this.mailerService.sendMail({
             to: engineer_email,
-            from: `Support Team <no-reply@support-ticket-team.com>`,
+            from: `Support Team <info@smartupweb.com>`,
             subject: `New Ticket Created with (ID: ${newTicket_id}`,
             template: './layout',
             context: {
@@ -55,7 +55,7 @@ export class MailService {
         const baseUrl = process.env.BASE_URL
         await this.mailerService.sendMail({
             to: agentEmail,
-            from: `Support Team <no-reply@support-ticket-team.com>`,
+            from: `Support Team <info@smartupweb.com>`,
             subject: `New Request with (ID: ${request_id})`,
             template:'./layout',
             context: {
@@ -72,7 +72,7 @@ export class MailService {
         const baseUrl = process.env.BASE_URL
         await this.mailerService.sendMail({
             to: agentEmail,
-            from: `Support Team <no-reply@support-ticket-team.com>`,
+            from: `Support Team <info@smartupweb.com>`,
             subject: `New Request with (ID: ${request_id})`,
             template: './layout',
             context: {
@@ -96,7 +96,7 @@ export class MailService {
         })
         await this.mailerService.sendMail({
             to: agentEmail,
-            from: `Support Team <no-reply@support-ticket-team.com>`,
+            from: `Support Team <info@smartupweb.com>`,
             subject: `Request with (ID: ${request_id}) awaiting validation by you`,
             template: './layout',
             context: {

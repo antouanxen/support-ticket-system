@@ -59,7 +59,7 @@ export class AuthenticateService {
                     userEmail: newUser.userEmail,
                     userName: newUser.userName
                 }
-                //await this.mailService.sendEmailWelcome(welcomeEmailData)
+                await this.mailService.sendEmailWelcome(welcomeEmailData)
                 console.log('πηγε το εμαιλ για το καλοσωρισμα')
     
                 return new SignUpDto({
@@ -74,7 +74,8 @@ export class AuthenticateService {
                         userName: username || signUpDto.email?.split('@')[0] || 'new user',
                         userEmail: email,
                         userPassword: await this.hashingService.hashPassword(password)
-                    }
+                    },
+                    include: { role: true }
                 })
 
                 await prisma.agent.create({
@@ -89,15 +90,19 @@ export class AuthenticateService {
                     userEmail: newUser.userEmail,
                     userName: newUser.userName
                 }
-                //await this.mailService.sendEmailWelcome(welcomeEmailData)
+                await this.mailService.sendEmailWelcome(welcomeEmailData)
                 console.log('πηγε το εμαιλ για το καλοσωρισμα')
     
                 return new SignUpDto({
                     username: newUser.userName,
-                    email: newUser.userEmail
+                    email: newUser.userEmail,
+                    role: newUser.roleId ? newUser.role.role_description : 'agent'
                 })
             }
         } catch(err) {
+            if (err instanceof ConflictException) {
+                throw err
+            }
             console.log('There was an error with the sign up', err)
             throw new InternalServerErrorException('There was an error creating the user. Try again')
         }

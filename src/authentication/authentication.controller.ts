@@ -63,14 +63,17 @@ export class AuthenticationController {
 
         if (result) {
             const user = await prisma.user.findUnique({ 
-                where: { userEmail: signInDto.email}
+                where: { userEmail: signInDto.email},
+                include: { role: true }
             })
             const userId = user.id
+            const userRole = user.role ? user.role.role_description : 'agent'
+
             const { accessToken, refreshToken } = result
             res.cookie('refresh-token', refreshToken, { httpOnly: true, sameSite: 'strict', maxAge: 1000 * 60 * 60 * 24 })
             res.setHeader('Authorization', `Bearer ${accessToken}`)
 
-            res.status(200).json({ message: 'The user got logged in', accessToken,  userId}) 
+            res.status(200).json({ message: 'The user got logged in', accessToken,  userId, userRole }) 
         } else return res.status(401).json({ message: 'Password is not right. Put the correct password.' })
     } 
 
