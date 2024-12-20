@@ -1,10 +1,8 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateCustomerDto } from '../dtos/create-customer.dto';
 import { customer } from '@prisma/client';
 import prisma from 'prisma/prisma_Client';
-import { USER_ID } from 'src/authentication/constants/constantForUserAgent';
 import { UpdateCustomerDto } from '../dtos/update-customer.dto';
-import { GetSingleCustomerDto } from '../dtos/get-single_customer';
 
 @Injectable()
 export class CustomerService {
@@ -60,7 +58,7 @@ export class CustomerService {
         try {
             const singleCustomer = await prisma.customer.findFirst({
                 where: { c_name: name },
-               select: { 
+                select: { 
                     ticket: true,
                     id: true,
                     c_name: true,

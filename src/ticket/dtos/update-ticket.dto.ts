@@ -4,7 +4,7 @@ import { Status } from "../enum/status.enum";
 export class UpdateTicketStatusDto {
     @IsString()
     @IsOptional()
-    customId: string
+    customTicketId: string
 
     @IsEnum(Status)
     @IsNotEmpty()

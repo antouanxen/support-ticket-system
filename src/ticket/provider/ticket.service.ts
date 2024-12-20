@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateTicketDto } from '../dtos/create-ticket.dto';
 import { comment, ticket } from '@prisma/client';
 import prisma from 'prisma/prisma_Client';
@@ -25,6 +25,7 @@ export class TicketService {
         private readonly commentsService: CommentsService,
         private readonly categoryService: CategoryService,
         private readonly customerService: CustomerService,
+        @Inject(forwardRef(() => EngineerService) )
         private readonly engineerService: EngineerService,
         private readonly dependentTicketService: DependentTicketService,
         private readonly mailService: MailService,
@@ -43,7 +44,7 @@ export class TicketService {
     
         const customer = await this.customerService.getSingleCustomerByName(c_name);
         const category = await this.categoryService.getSingleCategoryByName(categoryName);
-        const customId = await this.generateCustomTicketIdService.generateCustomTicketId(categoryName);
+        const customTicketId = await this.generateCustomTicketIdService.generateCustomTicketId(categoryName);
     
         try {
             const newTicket = await prisma.ticket.create({
@@ -55,7 +56,7 @@ export class TicketService {
                     categoryId: category.id,
                     featuredImageUrl: featuredImageUrl ? featuredImageUrl : null,
                     status: Status.PENDING,
-                    customTicketId: customId
+                    customTicketId: customTicketId
                 },
                 include: { customer: true }
             });
@@ -96,27 +97,27 @@ export class TicketService {
         } catch(err) {
             if (err instanceof NotFoundException) {
                 console.log('Dependent ticket or engineer was not found:', err.message);
-                await prisma.ticket.delete({ where: { customTicketId: customId } })
+                await prisma.ticket.delete({ where: { customTicketId: customTicketId } })
                 throw err;
             } else if (err instanceof BadRequestException) {
                 console.log('There was an error with the database:', err.message);
-                await prisma.ticket.delete({ where: { customTicketId: customId } })
+                await prisma.ticket.delete({ where: { customTicketId: customTicketId } })
                 throw err
             }
             console.log('ticket was not created', err);
-            await prisma.ticket.delete({ where: { customTicketId: customId } })
+            await prisma.ticket.delete({ where: { customTicketId: customTicketId } })
             throw new InternalServerErrorException('There was an error with the server. Try again');
         };
     }
 
-    public async assignTicketToEng(customId: string, engineerIds: string[], userId: string) {
+    public async assignTicketToEng(customTicketId: string, engineerIds: string[], userId: string) {
         const agent = await prisma.agent.findUnique({ 
             where: { userId: userId }
         })
 
         if (!agent) throw new NotFoundException('User does not exist')
 
-        const ticket = await prisma.ticket.findUnique({ where: { customTicketId: customId }, include: { customer: true } })
+        const ticket = await prisma.ticket.findUnique({ where: { customTicketId: customTicketId }, include: { customer: true } })
             
         if (!ticket) throw new NotFoundException('Ticket does not exist')
             
@@ -124,7 +125,7 @@ export class TicketService {
             return prisma.assigned_engineers.findUnique({ where: {
                 ticketCustomId_engineerId: {
                     engineerId: engId,
-                    ticketCustomId: customId
+                    ticketCustomId: customTicketId
                 }
             }})
         }))
@@ -205,19 +206,7 @@ export class TicketService {
                     agent: { select: { asUser: { select: { id: true, userName: true, userEmail: true } } } },
                     dependent_tickets_ticketCustomId: { select: { ticketCustomId: true } }, 
                     dependent_tickets_dependentTicketCustomId: { select: { dependentTicketCustomId: true } },
-                    assigned_engineers: {
-                        select: {
-                            engineer: {
-                                select: {
-                                    asUser: {
-                                        select: { 
-                                            id: true, userName: true, userEmail: true
-                                        } 
-                                    } 
-                                } 
-                            } 
-                        } 
-                    }
+                    assigned_engineers: { select: { engineer: { select: { asUser: { select: { id: true, userName: true, userEmail: true } } } } } } 
                 }
             })
 
@@ -230,30 +219,18 @@ export class TicketService {
         }
     }
 
-    public async getSingleTicket(customId: string): Promise <ticket> {
+    public async getSingleTicket(customTicketId: string): Promise <ticket> {
         try {
             const singleTicket = await prisma.ticket.findUnique({
-                where: { customTicketId: customId },
+                where: { customTicketId: customTicketId },
                 include: { 
-                    category: true,
+                    category: { include: { engineer: { select: { asUser: { select: { id: true, userName: true, userEmail: true } } } } } },
                     customer: true,
                     comment: true,
                     agent: { select: { asUser: { select: { id: true, userName: true, userEmail: true } } } },
                     dependent_tickets_ticketCustomId: { select: { ticketCustomId: true } }, 
                     dependent_tickets_dependentTicketCustomId: { select: { dependentTicketCustomId: true } },
-                    assigned_engineers: {
-                        select: {
-                            engineer: {
-                                select: {
-                                    asUser: {
-                                        select: { 
-                                            id: true, userName: true, userEmail: true
-                                        } 
-                                    } 
-                                } 
-                            } 
-                        } 
-                    }
+                    assigned_engineers: { select: { engineer: { select: { asUser: { select: { id: true, userName: true, userEmail: true } } } } } }
                 }
             })
 
@@ -265,20 +242,20 @@ export class TicketService {
     }
 
     public async updateTicketStatus(updateTicketStatusDto: UpdateTicketStatusDto, userId: string): Promise<ticket> {
-        const { customId, status } = updateTicketStatusDto
+        const { customTicketId, status } = updateTicketStatusDto
         const validStatus = ['pending', 'resolved', 'in_progress']
 
         const agentId = userId
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
-        if (!customId) throw new NotFoundException('Ticket ID is required')
+        if (!customTicketId) throw new NotFoundException('Ticket ID is required')
 
         if (!validStatus.includes(status)) throw new BadRequestException('Cannot use more than one status')  
 
         try {
             const ticketToBeUpdated = await prisma.ticket.findUnique({ 
-                where: { customTicketId: customId },
+                where: { customTicketId: customTicketId },
                 include: { 
                     comment: true,
                     dependent_tickets_ticketCustomId: { select: { ticketCustomId: true } }, 
@@ -313,21 +290,21 @@ export class TicketService {
     }
 
     public async addNewCommentForTicket(addCommentDto: AddCommentDto, userId: string) {
-        const { content, customId } = addCommentDto
+        const { content, customTicketId } = addCommentDto
 
         const agentId = userId
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const ticket = await this.getSingleTicket(customId)
+            const ticket = await this.getSingleTicket(customTicketId)
  
             if (!ticket) {
             console.log('Το ticket δεν βρεθηκε')
             throw new NotFoundException('That ticket was not found')
             }
 
-            const newComment = await this.commentsService.AddComment(content, customId, userId)
+            const newComment = await this.commentsService.AddComment(content, customTicketId, userId)
             return newComment              
         } catch(err) {
             console.log('Error creating the comment', err)

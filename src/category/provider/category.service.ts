@@ -1,10 +1,8 @@
 import { Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateCategoryDto } from '../dtos/create-category.dto';
-import { USER_ID } from 'src/authentication/constants/constantForUserAgent';
 import prisma from 'prisma/prisma_Client';
 import { category } from '@prisma/client';
 import { UpdateCategoryDto } from '../dtos/update-category.dto';
-import { GetSingleCategoryDto } from '../dtos/get-single_category.dto';
 
 @Injectable()
 export class CategoryService {

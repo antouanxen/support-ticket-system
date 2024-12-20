@@ -41,25 +41,30 @@ export class EngineerController {
         else return res.status(400).json({ message: 'The engineer was not created, check the body' })
     }
 
-    @Get()
-    @ApiOperation({ summary: 'Use this endpoint to fetch all engineers from the database' })
+    @Get(':customTicketId')
+    @ApiOperation({ summary: 'Use this endpoint to fetch all engineers from the database, based on the category that they are assigned to' })
+    @ApiParam({
+        name: 'customTicketId', 
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
+    })
     @ApiResponse({ status: 200, description: 'All the engineers were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'No engineers were found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })  
-    public async getAllEngineers(@Req() req: Request, @Res() res: Response) {
+    public async getAllEngineers(@Param('customTicketId') customTicketId: string, @Req() req: Request, @Res() res: Response) {
         console.log('Εδω παιρνεις ολους τους engineers')
         const user = req.res.locals.user
         const userId = user.sub
 
-        const engineerList = await this.engineerService.findAllEngineers(userId)
-
-        if (engineerList && engineerList.length > 0) {
+        const engineerList = await this.engineerService.findAllEngineers(customTicketId, userId)
+       
+        if (Array.isArray(engineerList)) {
             console.log('Οι engineers φτασανε')
             console.log('Tο συνολο τους:', engineerList.length)
-
-            return res.status(200).json(engineerList)
-        } else return res.status(404).json({ message: 'No engineers were found' })
+            return res.status(200).json(engineerList);
+        } else {
+            return res.status(404).json({ message: 'There were no engineers matching that category in the database', engineers: [] });
+        }    
     }
 
     @Get(':engineerId')

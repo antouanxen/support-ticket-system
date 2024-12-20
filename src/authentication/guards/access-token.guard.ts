@@ -57,7 +57,10 @@ export class AccessTokenGuard implements CanActivate {
           include: { role: true } 
         }) : null
 
-        if (!user || user.tokenVersion !== payload.tokenVersion) throw new UnauthorizedException('Token verification has failed. Try again.')
+        if (!user || user.tokenVersion !== payload.tokenVersion) {
+          console.log('Το token ειναι παλιο')
+          throw new UnauthorizedException('Token verification has failed. Try again.')
+        }
 
         request.res.locals.user = payload     
         console.log('payload', payload)
