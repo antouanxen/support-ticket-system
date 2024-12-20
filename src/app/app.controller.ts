@@ -1,5 +1,5 @@
 import { Controller, Get, Res } from '@nestjs/common';
-import { AppService } from './app.service'
+import { AppService } from './providers/app.service'
 import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
 import { Response } from 'express';
 

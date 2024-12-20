@@ -87,7 +87,6 @@ export class AssignTicketsByCatToEngsService {
                     engineerId: { in: engineersByCategory.map(engineer => engineer.engineerId) } 
                 }
             })
-
             console.log('Assigned Engineers:', assignedEngineers);
 
             const assignedEngsIds = new Set(assignedEngineers.map(engineer => engineer.engineerId))
@@ -98,7 +97,6 @@ export class AssignTicketsByCatToEngsService {
             const engineersToBeAssigned = await prisma.engineer.findMany({
                 where: { engineerId: { in: availableEngineers }}
             })
-
             console.log('Engineers to be assigned:', engineersToBeAssigned);
 
             return engineersToBeAssigned

@@ -9,6 +9,9 @@ import { Status } from './enum/status.enum';
 import { SortTicketsDto } from './dtos/sort-tickets.dto';
 import { getTicketsToSort } from 'utils/getTicketsToSort';
 import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
+import { Action } from 'src/app/decorators/action.decorator';
+import { Notification_action } from 'src/app/enums/notification_action.enum';
+import { Notification_ownAction } from 'src/app/enums/notification_ownAction.enum';
 
 @Controller('tickets')
 @ApiTags('Tickets')
@@ -17,7 +20,7 @@ export class TicketController {
 
     @ApiBearerAuth()
     @Post()
-    @ApiCreatedResponse()
+    @Action([ Notification_action.CREATED_TICKET, Notification_ownAction.CREATED_TICKET ])
     @ApiOperation({ summary: 'Use this endpoint to create a ticket, and also send a new email to the engineer assigned with it, based on the body. If there is no engineerId handed, it automatically checks and assigns from the database the engineers specialised in a single category analogical to the level of priority. If there are not enough, it returns the total.' })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
@@ -44,6 +47,7 @@ export class TicketController {
         console.log('New ticket:', ticketCreated)
         
         if (ticketCreated) {
+            res.locals.ticketCreated = ticketCreated
             console.log('ticket was created')
             return res.status(201).json(ticketCreated)
         }
@@ -51,10 +55,10 @@ export class TicketController {
     } 
 
     @ApiBearerAuth()
-    @Patch(':customId/assign_eng')
+    @Patch(':customTicketId/assign_eng')
     @ApiOperation({ summary: 'Use this endpoint to assign a ticket to an engineer, and also send a new email based on the body' })
     @ApiParam({
-        name: 'customId', 
+        name: 'customTicketId', 
         schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The custom ID of the ticket' }
     })
     @ApiBody({
@@ -67,22 +71,21 @@ export class TicketController {
     @ApiResponse({ status: 404, description: 'Not found. Could not find that ticket or the engineer.'})
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async assignTicketToEng(@Param('customId') customId: string, @Body() body: { engineerIds: string[] }, @Req() req: Request, @Res() res: Response) {
+    public async assignTicketToEng(@Param('customTicketId') customTicketId: string, @Body() body: { engineerIds: string[] }, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
         
 
         console.log('Kάνεις ενα ticket assign σε εναν engineer')
 
-       
-        const ticketAssigned = await this.ticketService.assignTicketToEng(customId, body.engineerIds, userId)
+        
+        const ticketAssigned = await this.ticketService.assignTicketToEng(customTicketId, body.engineerIds, userId)
 
         if (ticketAssigned) {
             console.log('ticket was assigned')
-            return res.status(200).json({ message: `The ticket (ID: ${customId}) was assigned to the engineer/s (ID/s: ${body.engineerIds})`})
+            return res.status(200).json({ message: `The ticket (ID: ${customTicketId}) was assigned to the engineer/s (ID/s: ${body.engineerIds})`})
         }  else return res.status(400).json({ message: 'The ticket was not assigned, check the body' })
     }
-
 
     @ApiBearerAuth()
     @Get()
@@ -131,37 +134,37 @@ export class TicketController {
         else return res.status(404).json({ message: 'No tickets were found' })
     }
 
-    @Get(':customId')
+    @Get(':customTicketId')
     @IsPublic(true)
     @ApiOperation({ summary: 'Use this endpoint to fetch a ticket from the database' })
     @ApiParam({
-        name: 'customId', 
+        name: 'customTicketId', 
         schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
     })
     @ApiResponse({ status: 200, description: 'A ticket is fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'That ticket was not found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })  
-    public async getSingleTicket(@Param('customId') customId: string, @Req() req: Request, @Res() res: Response) {
+    public async getSingleTicket(@Param('customTicketId') customTicketId: string, @Req() req: Request, @Res() res: Response) {
         console.log('Eδω παιρνεις το ταδε ticket')
 
-        const singleTicket = await this.ticketService.getSingleTicket(customId)
+        const singleTicket = await this.ticketService.getSingleTicket(customTicketId)
         
         if (singleTicket) {
             console.log('Οριστε το ticket', singleTicket)
             return res.status(200).json(singleTicket)
         }   
         else {
-            console.log(`Δεν υπαρχει αυτο το ticket με ID: ${customId}`)
+            console.log(`Δεν υπαρχει αυτο το ticket με ID: ${customTicketId}`)
             return res.status(404).json({ message: 'That ticket was not found'})
         } 
     }
 
     @ApiBearerAuth()
-    @Patch(':customId')
+    @Patch(':customTicketId')
     @ApiOperation({ summary: 'Use this endpoint to update a ticket status plus make a comment, based on the body' })
     @ApiParam({
-        name: 'customId', 
+        name: 'customTicketId', 
         schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
     })
     @ApiBody({
@@ -182,11 +185,11 @@ export class TicketController {
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'That ticket was not found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async updateTicketStatus(@Param('customId') customId: string, @Body('status') status: Status, @Req() req: Request, @Res() res: Response) {
+    public async updateTicketStatus(@Param('customTicketId') customTicketId: string, @Body('status') status: Status, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
 
-        const updateTicketStatusDto: UpdateTicketStatusDto = { customId, status }
+        const updateTicketStatusDto: UpdateTicketStatusDto = { customTicketId: customTicketId, status }
         console.log('Ενημερωνεις ενα ticket')
         const ticketUpdated = await this.ticketService.updateTicketStatus(updateTicketStatusDto, userId)
 
@@ -198,10 +201,10 @@ export class TicketController {
     }
 
     @ApiBearerAuth()
-    @Post(':customId/comments')
+    @Post(':customTicketId/comments')
     @ApiOperation({ summary: 'Use this endpoint to create a comment based on the body' })
     @ApiParam({
-        name: 'customId', 
+        name: 'customTicketId', 
         schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
     })
     @ApiBody({
@@ -214,11 +217,11 @@ export class TicketController {
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'That ticket was not found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async addCommentForTicket(@Param('customId') customId: string, @Body() addCommentDto: AddCommentDto, @Req() req: Request, @Res() res: Response) {
+    public async addCommentForTicket(@Param('customTicketId') customTicketId: string, @Body() addCommentDto: AddCommentDto, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
 
-        addCommentDto.customId = customId 
+        addCommentDto.customTicketId = customTicketId 
 
         console.log('Δημιουργεις ενα comment για ticket')
         const newComment = await this.ticketService.addNewCommentForTicket(addCommentDto, userId)

@@ -8,6 +8,6 @@ export class AddCommentDto {
     
     @IsOptional()
     @IsString()
-    customId?: string
+    customTicketId?: string
 
 }

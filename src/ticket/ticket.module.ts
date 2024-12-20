@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { TicketController } from './ticket.controller';
 import { TicketService } from './provider/ticket.service';
 import { MetricsService } from './provider/metrics.service';
@@ -14,7 +14,7 @@ import { GenerateCustomTicketIdService } from './provider/generate-custom-ticket
 import { AssignTicketsByCatToEngsService } from './provider/assign-tickets-by-cat-to-engs.service';
 
 @Module({
-  imports: [CommentsModule, CategoryModule, CustomerModule, EngineerModule, ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
+  imports: [CommentsModule, CategoryModule, CustomerModule, forwardRef(() => EngineerModule), ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
   controllers: [TicketController],
   providers: [TicketService, MetricsService, DependentTicketService, GenerateCustomTicketIdService, AssignTicketsByCatToEngsService],
   exports: [TicketService]

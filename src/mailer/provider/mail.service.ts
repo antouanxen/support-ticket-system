@@ -18,7 +18,7 @@ export class MailService {
         const { userId, userEmail, userName } = data
         const baseUrl = process.env.BASE_URL
         await this.mailerService.sendMail({
-            to: 'axenakis@smartupweb.com',
+            to: userEmail,
             from: `Support Team <info@smartupweb.com>`,
             subject: 'Welcome To The Team',
             template: './layout',

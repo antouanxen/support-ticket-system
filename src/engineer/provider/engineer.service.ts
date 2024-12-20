@@ -1,16 +1,19 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateEngineerDto } from '../dtos/create-engineer.dto';
 import { engineer, user } from '@prisma/client';
 import prisma from 'prisma/prisma_Client';
 import { UpdateEngineerDto } from '../dtos/update-engineer.dto';
 import { EngineerTicketsService } from './engineer-tickets.service';
 import { CategoryService } from 'src/category/provider/category.service';
+import { TicketService } from 'src/ticket/provider/ticket.service';
 
 @Injectable()
 export class EngineerService {
     constructor(
         private readonly engineerTicketsService: EngineerTicketsService,
         private readonly categoryService: CategoryService,
+        @Inject(forwardRef(() => TicketService) )
+        private readonly ticketService: TicketService
     ) {}
 
     public async createEngineer(createEngineerDto: CreateEngineerDto, userId: string): Promise<Partial<CreateEngineerDto> | { message: string }> {
@@ -77,10 +80,15 @@ export class EngineerService {
         }
     } 
 
-    public async findAllEngineers(userId: string) {
+    public async findAllEngineers(customTicketId: string, userId: string) {
         const agentId = userId
-
         if (!agentId) throw new NotFoundException('User does not exist')
+        
+        const ticket = await this.ticketService.getSingleTicket(customTicketId)
+        if (!ticket) throw new NotFoundException('That ticket was not found')
+            
+        const ticketCategory = await this.categoryService.findCategoryById(ticket.categoryId)
+        if (!ticketCategory) throw new NotFoundException('That category was not found')
 
         try {
             const allEngineers = await prisma.user.findMany({
@@ -91,14 +99,19 @@ export class EngineerService {
                     userEmail: true,
                     last_logged_at: true,
                     role: { select: { role_description: true } },
-                    engineer: { select: { assigned_engineers: { select: { ticketCustomId: true } } } }
+                    engineer: { select: { assigned_engineers: { select: { ticketCustomId: true } }, categoryId: true } }
                 }
             }) 
 
-            return allEngineers
+            const allEngineersByCategory = allEngineers.filter(user => user.engineer.categoryId === ticket.categoryId)
+
+            if (allEngineersByCategory.length === 0) return { message: 'There were no engineers matching that category in the database', engineers: []}
+ 
+            return allEngineersByCategory
         } catch (err) {
-            console.log('there was an error finding the agents with roles', err)
-            throw new InternalServerErrorException('There was an error finding the agents with roles.')
+            if (err instanceof NotFoundException) throw err
+            console.log('there was an error finding engineers by category', err)
+            throw new InternalServerErrorException('There was an error finding engineers by category.')
         }
     }
 
