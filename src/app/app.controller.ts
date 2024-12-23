@@ -1,7 +1,7 @@
-import { Controller, Get, Res } from '@nestjs/common';
-import { AppService } from './providers/app.service'
-import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
-import { Response } from 'express';
+import { Controller, Get, Res } from "@nestjs/common";
+import { AppService } from "./providers/app.service";
+import { IsPublic } from "src/authentication/decorators/is-public.decorator";
+import { Response } from "express";
 
 @Controller()
 export class AppController {
@@ -10,7 +10,6 @@ export class AppController {
   @Get()
   @IsPublic(true)
   getHello(@Res() res: Response) {
-    res.send('hello fellow <i>Smart Up</i> dudes')
+    res.send("hello fellow <i>Smart Up</i> dudes");
   }
-    
 }

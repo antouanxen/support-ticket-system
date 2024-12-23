@@ -45,7 +45,7 @@ export class NotificationInterceptor implements NestInterceptor {
           }
           return mainResponse
         },
-        error: (err) => console.log('Πρόβλημα με τις ειδοποιήσεις:', err)
+        //error: (err) => console.log('Πρόβλημα με τις ειδοποιήσεις:', err)
       })
     );
   }

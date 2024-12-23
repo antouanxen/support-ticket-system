@@ -99,7 +99,15 @@ export class EngineerService {
                     userEmail: true,
                     last_logged_at: true,
                     role: { select: { role_description: true } },
-                    engineer: { select: { assigned_engineers: { select: { ticketCustomId: true } }, categoryId: true } }
+                    engineer: {
+                        select: {
+                            assigned_engineers: {
+                                select: {
+                                    ticketCustomId: true 
+                                } 
+                            }, categoryId: true 
+                        } 
+                    }
                 }
             }) 
 

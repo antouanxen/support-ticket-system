@@ -12,6 +12,7 @@ import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
 import { Action } from 'src/app/decorators/action.decorator';
 import { Notification_action } from 'src/app/enums/notification_action.enum';
 import { Notification_ownAction } from 'src/app/enums/notification_ownAction.enum';
+import prisma from 'prisma/prisma_Client';
 
 @Controller('tickets')
 @ApiTags('Tickets')
@@ -31,6 +32,7 @@ export class TicketController {
             categoryName: { type: 'string', example: 'billing', description: 'A category summary of the ticket issued, maybe you need to create a category first if you cannot find one you need'},
             status: { type: 'string', default: 'pending', description: 'An enum for the status of the ticket issued, use the example options as shown'},
             featuredImageUrl: { type: 'string/url', example: 'http://localhost.com/images/image1.jpg', description: 'An image url for the ticket' },
+            due_date: { type: 'date', example: '2024-12-25 10:05:18.053', description: 'The date which the ticket should be evaluated and solved by an engineer' },
             engineerIds: { type: 'array', items: { type: 'string', format: 'uuid', example: '102fcad9-6ac3-4151-aa27-49c0726609a6' }, description: 'The ID of an user (engineer). It can also be an array of multiple engineer IDs, dependent on the ticket you are creating. Optional.' },
             dependent_ticketCustomId: { type: 'string', example: 'BI-000010', description: 'The ID of a different ticket, dependent on the one you are creating. Optional.' }
         }, required: ['c_name', 'priority', 'status', 'categoryName'] }, })
@@ -75,15 +77,14 @@ export class TicketController {
         const user = req.res.locals.user
         const userId = user.sub
         
-
-        console.log('Kάνεις ενα ticket assign σε εναν engineer')
-
-        
+        console.log('Kάνεις ενα ticket assign σε engineer(s)')
         const ticketAssigned = await this.ticketService.assignTicketToEng(customTicketId, body.engineerIds, userId)
-
+        const engineersAssigned = await prisma.user.findMany({ where: { id: { in: body.engineerIds } } })
+        const engineersNames = engineersAssigned.map(eng => eng.userName)
+    
         if (ticketAssigned) {
             console.log('ticket was assigned')
-            return res.status(200).json({ message: `The ticket (ID: ${customTicketId}) was assigned to the engineer/s (ID/s: ${body.engineerIds})`})
+            return res.status(200).json({ message: `The ticket (ID: ${customTicketId}) was assigned to the engineer/s (Name/s: ${engineersNames.join(', ')})`})
         }  else return res.status(400).json({ message: 'The ticket was not assigned, check the body' })
     }
 
