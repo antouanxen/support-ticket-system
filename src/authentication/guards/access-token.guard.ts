@@ -1,10 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigType } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import authConfig from "../config/authConfig";
@@ -42,9 +36,7 @@ export class AccessTokenGuard implements CanActivate {
           : null;
 
         if (!user || user.tokenVersion !== payload.tokenVersion)
-          throw new UnauthorizedException(
-            "Token verification has failed. Try again.",
-          );
+          throw new UnauthorizedException("Token verification has failed. Try again.");
 
         request.res.locals.user = payload;
         console.log("payload", payload);
@@ -52,9 +44,7 @@ export class AccessTokenGuard implements CanActivate {
         return true;
       } catch (err) {
         console.log("Tο access token ειναι invalid.", err.message);
-        throw new UnauthorizedException(
-          "Token verification in access token has failed. Try again.",
-        );
+        throw new UnauthorizedException("Token verification in access token has failed. Try again.");
       }
     }
 
@@ -74,9 +64,7 @@ export class AccessTokenGuard implements CanActivate {
 
         if (!user || user.tokenVersion !== payload.tokenVersion) {
           console.log("Το token ειναι παλιο");
-          throw new UnauthorizedException(
-            "Token verification has failed. Try again.",
-          );
+          throw new UnauthorizedException("Token verification has failed. Try again.");
         }
 
         request.res.locals.user = payload;
@@ -85,9 +73,7 @@ export class AccessTokenGuard implements CanActivate {
         return true;
       } catch (err) {
         console.log("Tο refresh token ειναι invalid.", err.message);
-        throw new UnauthorizedException(
-          "Token verification in refresh token has failed. Try again.",
-        );
+        throw new UnauthorizedException("Token verification in refresh token has failed. Try again.");
       }
     }
     throw new UnauthorizedException("No tokens provided, log in first.");

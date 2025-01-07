@@ -89,6 +89,36 @@ export class TicketController {
     }
 
     @ApiBearerAuth()
+    @Patch(':customTicketId/un-assign_eng')
+    @ApiOperation({ summary: 'Use this endpoint to un-assign a ticket from a number of engineers, and also send a new email based on the body' })
+    @ApiParam({
+        name: 'customTicketId', 
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The custom ID of the ticket' }
+    })
+    @ApiBody({
+        description: 'Fill the body requirements as shown below',
+        schema: { type: 'object', properties: {
+            engineerIds: { type: 'array', items: { type: 'string', format: 'uuid', example: '49ce5736-8a36-43de-826c-d141fcd53a3a' }, description: 'The ID of an user (engineer). It can also be an array of multiple engineer IDs, dependent on the ticket you are creating.' },
+        }, required: ['engineerIds'] }, })
+    @ApiResponse({ status: 200, description: 'A ticket is un-assigned successfully from a number of engineers. Returns a string message.' })
+    @ApiResponse({ status: 400, description: 'Bad request. Could not un-assign that ticket'})
+    @ApiResponse({ status: 404, description: 'Not found. Could not find that ticket or the engineer.'})
+    @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
+    @ApiResponse({ status: 500, description: 'An error occured to the server' })
+    public async unAssignTicketToEng(@Param('customTicketId') customTicketId: string, @Body() body: { engineerIds: string[] }, @Req() req: Request, @Res() res: Response) {
+        const user = req.res.locals.user
+        const userId = user.sub
+        
+        console.log('Kάνεις un-assign engineer(s) απο καποιο ticket')
+        const ticketUnAssigned = await this.ticketService.unAssignTicketFromEng(customTicketId, body.engineerIds, userId)
+    
+        if (ticketUnAssigned) {
+            console.log('ticket was assigned')
+            return res.status(200).json({ message: `${ticketUnAssigned}`})
+        }  else return res.status(400).json({ message: 'The ticket was not assigned, check the body' })
+    }
+
+    @ApiBearerAuth()
     @Get()
     @ApiOperation({ summary: 'Use this endpoint to fetch all tickets from the database sorted by default by the newest created_at Date to the latest, with extra sorting available.' })
     @ApiQuery({

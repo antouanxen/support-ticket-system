@@ -9,8 +9,8 @@ export class DependentTicketService {
         
         const dependent_ticket_relation = await prisma.dependent_tickets.create({ 
             data: {
-                ticketCustomId: customId,
-                dependentTicketCustomId: dependent_ticketCustomId
+                ticketCustomId: dependent_ticketCustomId,
+                dependentTicketCustomId: customId
             }
         })
 

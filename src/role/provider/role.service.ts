@@ -15,7 +15,7 @@ export class RoleService {
 
         try {
             const newRole = await prisma.role.create({
-                data: { role_description: role_description.toLocaleLowerCase() }
+                data: { role_description: role_description.toLowerCase().replace(/\s+/g, '_') }
             })
     
             return newRole

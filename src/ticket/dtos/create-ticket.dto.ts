@@ -1,7 +1,6 @@
-import { IsArray, IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, IsUUID, MaxLength } from "class-validator"
+import { IsArray, IsDate, IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from "class-validator"
 import { PriorityLevel } from "../enum/priority.enum"
 import { Status } from "../enum/status.enum"
-import { Categories } from "src/category/enums/categories.enum"
 
 export class CreateTicketDto {
 
@@ -21,7 +20,7 @@ export class CreateTicketDto {
     @IsNotEmpty()
     @IsString()
     @MaxLength(150)
-    categoryName: Categories
+    categoryName: string
 
     @IsOptional()
     @IsEnum(Status)

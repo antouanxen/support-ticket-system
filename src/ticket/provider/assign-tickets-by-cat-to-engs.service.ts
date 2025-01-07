@@ -1,11 +1,10 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import prisma from 'prisma/prisma_Client';
 import { PriorityLevel } from '../enum/priority.enum';
-import { Categories } from 'src/category/enums/categories.enum';
 
 @Injectable()
 export class AssignTicketsByCatToEngsService {
-    public async assignTicketsByCatToEngs(priority: PriorityLevel, categoryName: Categories, ticketId: string) {
+    public async assignTicketsByCatToEngs(priority: PriorityLevel, categoryName: string, ticketId: string) {
         if (!categoryName) throw new BadRequestException(`Category with name "${categoryName}" does not exist.`)
             
         try {

@@ -22,7 +22,7 @@ export class CategoryService {
             
             const newCategory = await prisma.category.create({
                 data: {
-                    categoryName: createCategoryDto.categoryName.toLowerCase()
+                    categoryName: createCategoryDto.categoryName.toLowerCase().replace(/\s+/g, '_')
                 }
             })
 

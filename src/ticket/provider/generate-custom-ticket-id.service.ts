@@ -1,24 +1,31 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import prisma from 'prisma/prisma_Client';
-import { Categories } from 'src/category/enums/categories.enum';
-import { CustomTicketId } from 'utils/CustomTicketId.type';
+
 
 @Injectable()
 export class GenerateCustomTicketIdService {
     public async generateCustomTicketId(categoryName: string): Promise<string> {
-        const category = Object.values(Categories).find(cat => cat === categoryName)
+       /*  const category = Object.values(Categories).find(cat => cat === categoryName)
 
-        if (!category) throw new BadRequestException('Invalid category name')
+        if (!category) throw new BadRequestException('Invalid category name') */
+        const category = await prisma.category.findUnique({ where: { categoryName: categoryName} })
 
-        const firstLetters = CustomTicketId[category]
+        let prefixForTicketCategory: string = ''
+
+        if (category.categoryName.includes('_')) {
+            const firstLetters = category.categoryName.slice(0, 2)
+            const secondWordFirstLetter = category.categoryName.split('_')[1].slice(0, 1)
+
+            prefixForTicketCategory = `${firstLetters.toUpperCase()}${secondWordFirstLetter.toUpperCase()}-` 
+        } else prefixForTicketCategory = `${category.categoryName.slice(0, 2).toUpperCase()}-`
 
         const lastTicket = await prisma.ticket.findFirst({
-            where: { category: { categoryName: categoryName } },
+            where: { category: { categoryName: category.categoryName } },
             orderBy: { created_at: 'desc' } 
         })
 
-        const nextId = lastTicket ? parseInt(lastTicket.customTicketId.replace(firstLetters, '')) +1 : 1;
+        const ticketNumber = lastTicket ? parseInt(lastTicket.customTicketId.replace(prefixForTicketCategory, '')) +1 : 1;
 
-        return `${firstLetters}${String(nextId).padStart(6, '0')}`
+        return `${prefixForTicketCategory.toUpperCase()}${String(ticketNumber).padStart(6, '0')}`
     }
 }

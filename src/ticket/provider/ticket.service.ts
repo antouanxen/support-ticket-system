@@ -34,10 +34,7 @@ export class TicketService {
     private readonly assignTicketsByCatToEngsService: AssignTicketsByCatToEngsService,
   ) {}
 
-  public async createTicket(
-    createTicketDto: CreateTicketDto,
-    userId: string,
-  ): Promise<ticket> {
+  public async createTicket(createTicketDto: CreateTicketDto, userId: string): Promise<ticket> {
     const {
       c_name,
       issue_description,
@@ -56,12 +53,8 @@ export class TicketService {
     if (!agent) throw new NotFoundException("User does not exist");
 
     const customer = await this.customerService.getSingleCustomerByName(c_name);
-    const category =
-      await this.categoryService.getSingleCategoryByName(categoryName);
-    const customTicketId =
-      await this.generateCustomTicketIdService.generateCustomTicketId(
-        categoryName,
-      );
+    const category = await this.categoryService.getSingleCategoryByName(categoryName);
+    const customTicketId = await this.generateCustomTicketIdService.generateCustomTicketId(categoryName);
 
     try {
       const newTicket = await prisma.ticket.create({
@@ -102,9 +95,7 @@ export class TicketService {
       if (Array.isArray(engineerIds) && engineerIds.every((id) => isUUID(id))) {
         await this.assignTicketToEng(newTicket.customTicketId, engineerIds, userId);
       } else if (engineerIds === undefined) {
-        console.log(
-          `Δεν βρεθηκε engineer, προχωραει η αυτοματη αναθεση αναλογα το priority level`,
-        );
+        console.log(`Δεν βρεθηκε engineer, προχωραει η αυτοματη αναθεση αναλογα το priority level`);
         const availableEngs = await this.assignTicketsByCatToEngsService.assignTicketsByCatToEngs(priority, categoryName, newTicket.id);
 
         if (availableEngs === undefined) {
@@ -214,10 +205,7 @@ export class TicketService {
   
           await this.mailService.sendEmailForNewTicket(newTicketEmailData);
           console.log("πηγε το εμαιλ για το νεο ticket");
-          console.log(
-            `Φτιαχτηκε μια σχεση με τον engineer με ID: ${userEngineer.engineer.engineerId} και το ticket με ID: ${ticket.customTicketId}`,
-          );
-          
+          console.log(`Φτιαχτηκε μια σχεση με τον engineer με ID: ${userEngineer.engineer.engineerId} και το ticket με ID: ${ticket.customTicketId}`)
         }))
        
         return true;
@@ -226,12 +214,77 @@ export class TicketService {
         else if (err instanceof NotFoundException) throw err;
         else if (err instanceof ConflictException) throw err;
        
-
         console.log("ticket was not created due to engineer assignment issue", err);
         throw new InternalServerErrorException("There was an error with the server. Try again");
       }
     } else {
       throw new BadRequestException("Engineer IDs should be an array and not empty");
+    }
+  }
+
+  public async unAssignTicketFromEng(customTicketId: string, engineerIds: string[], userId: string) {
+    const agent = await prisma.agent.findUnique({
+      where: { userId: userId }
+    })
+
+    if (!agent) throw new NotFoundException('User does not exist')
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { customTicketId: customTicketId }
+    })
+
+    if (!ticket) throw new NotFoundException('Ticket does not exist')
+
+    if (engineerIds.length > 0 && engineerIds.every((id) => isUUID(id))) {
+      try {
+        const userEngineers = await prisma.user.findMany({
+          where: {
+            id: {
+              in: Array.isArray(engineerIds) ? engineerIds : [engineerIds],
+            },
+          },
+          select: {
+            id: true, userName: true, userEmail: true,
+            engineer: { select: { engineerId: true } } 
+          },
+        });
+
+        if (!userEngineers || userEngineers.length !== engineerIds.length) {
+          throw new BadRequestException("Some of the provided engineers do not exist in the database");
+        }
+
+        const engineersToBeUnassigned = await Promise.all(userEngineers.map(async (userEngineer) => {
+          return await prisma.assigned_engineers.delete({
+            where: {
+              ticketCustomId_engineerId: {
+                engineerId: userEngineer.engineer.engineerId,
+                ticketCustomId: ticket.customTicketId
+              }
+            },
+            select: {
+              engineer: {
+                select: { 
+                  engineerId: true, 
+                  asUser: { select: { id: true, userName: true, userEmail: true } } 
+                } 
+              }
+            }
+          })
+        }))
+
+        if (engineersToBeUnassigned.length > 0) {
+          const unAssignmentLogs = engineersToBeUnassigned.map(userEngineer => userEngineer.engineer.asUser.userName).join(', ')
+          console.log(`You have unassigned the following engineer/s: ${unAssignmentLogs} from ticket ${ticket.customTicketId}`)
+
+          return `You have unassigned the following engineer/s: ${unAssignmentLogs} from ticket ${ticket.customTicketId}`
+        }
+      } catch (err: any) {
+        if (err instanceof NotFoundException) throw err
+        if (err instanceof BadRequestException) throw err
+
+        console.log("the unassignement was failed due to server issue", err);
+        throw new InternalServerErrorException("There was an error with the server. Try again");
+      }
     }
   }
 
@@ -251,7 +304,7 @@ export class TicketService {
     const categoryId = engineerByCategory?.category?.id;
 
     try {
-      const ticketList = await prisma.ticket.findMany({
+      const ticketListToBeFound = await prisma.ticket.findMany({
         where: agent ? {} : { categoryId },
         orderBy: [{ created_at: "desc" }, { customTicketId: "asc" }],
         include: {
@@ -263,12 +316,8 @@ export class TicketService {
               asUser: { select: { id: true, userName: true, userEmail: true } },
             },
           },
-          dependent_tickets_ticketCustomId: {
-            select: { ticketCustomId: true },
-          },
-          dependent_tickets_dependentTicketCustomId: {
-            select: { dependentTicketCustomId: true },
-          },
+          dependent_tickets_parent: true ,
+          dependent_tickets_child: true ,
           assigned_engineers: {
             select: {
               engineer: {
@@ -283,8 +332,20 @@ export class TicketService {
         },
       });
 
-      if (ticketList && ticketList.length > 0) {
-        return ticketList;
+      const ticketListFound = async (ticketData: typeof ticketListToBeFound) => {
+        return await Promise.all(ticketData.map(ticket => {
+         return {
+            ...ticket,
+            dependent_tickets_child: ticket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId),
+            dependent_tickets_parent: ticket.dependent_tickets_child.map(child => child.ticketCustomId)
+          }
+        })
+      )}
+
+      const ticketsFetched = await ticketListFound(ticketListToBeFound)
+
+      if (ticketsFetched && ticketsFetched.length > 0) {
+        return ticketsFetched;
       } else return [];
     } catch (err: any) {
       console.log("No tickets were returned", err);
@@ -317,12 +378,8 @@ export class TicketService {
               asUser: { select: { id: true, userName: true, userEmail: true } },
             },
           },
-          dependent_tickets_ticketCustomId: {
-            select: { ticketCustomId: true },
-          },
-          dependent_tickets_dependentTicketCustomId: {
-            select: { dependentTicketCustomId: true },
-          },
+          dependent_tickets_parent: true,
+          dependent_tickets_child: true,
           assigned_engineers: {
             select: {
               engineer: {
@@ -337,7 +394,13 @@ export class TicketService {
         },
       });
 
-      return singleTicket;
+      const ticketFetched = {
+        ...singleTicket,
+        dependent_tickets_child: singleTicket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId),
+        dependent_tickets_parent: singleTicket.dependent_tickets_child.map(child => child.ticketCustomId)
+      }
+
+      return ticketFetched;
     } catch (err: any) {
       console.log("Could not find the ticket", err);
       throw new InternalServerErrorException(
@@ -346,10 +409,7 @@ export class TicketService {
     }
   }
 
-  public async updateTicketStatus(
-    updateTicketStatusDto: UpdateTicketStatusDto,
-    userId: string,
-  ): Promise<ticket> {
+  public async updateTicketStatus(updateTicketStatusDto: UpdateTicketStatusDto, userId: string): Promise<ticket> {
     const { customTicketId, status } = updateTicketStatusDto;
     const validStatus = ["pending", "resolved", "in_progress"];
 
@@ -367,10 +427,10 @@ export class TicketService {
         where: { customTicketId: customTicketId },
         include: {
           comment: true,
-          dependent_tickets_ticketCustomId: {
+          dependent_tickets_child: {
             select: { ticketCustomId: true },
           },
-          dependent_tickets_dependentTicketCustomId: {
+          dependent_tickets_parent: {
             select: { dependentTicketCustomId: true },
           },
           assigned_engineers: { select: { engineerId: true } },
@@ -407,12 +467,8 @@ export class TicketService {
     }
   }
 
-  public async addNewCommentForTicket(
-    addCommentDto: AddCommentDto,
-    userId: string,
-  ) {
+  public async addNewCommentForTicket(addCommentDto: AddCommentDto, userId: string) {
     const { content, customTicketId } = addCommentDto;
-
     const agentId = userId;
 
     if (!agentId) throw new NotFoundException("User does not exist");
@@ -445,17 +501,13 @@ export class TicketService {
     if (!agentId) throw new NotFoundException("User does not exist");
 
     const ticketVolume = await this.metricsService.getTicketVolume();
-    const avgResolutionTimeInHours =
-      await this.metricsService.getAverageResolutionTime();
+    const avgResolutionTimeInHours = await this.metricsService.getAverageResolutionTime();
     const pendingTickets = await this.metricsService.getPendingTicketCount();
     const resolvedTickets = await this.metricsService.getResolvedTicketCount();
-    const inProgressTickets =
-      await this.metricsService.getInProgressTicketCount();
+    const inProgressTickets = await this.metricsService.getInProgressTicketCount();
     const pendingRequests = await this.metricsService.getPendingRequestsCount();
-    const approvedRequests =
-      await this.metricsService.getApprovedRequestsCount();
-    const rejectedRequests =
-      await this.metricsService.getRejectedRequestsCount();
+    const approvedRequests = await this.metricsService.getApprovedRequestsCount();
+    const rejectedRequests = await this.metricsService.getRejectedRequestsCount();
 
     return {
       ticketVolume,
