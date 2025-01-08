@@ -7,26 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model agent {
-  agentId              String               @id(map: "PK_5e23a168ceafc7036e0e3de0bf7") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  agentOwnEmail        String?              @db.VarChar(150)
-  userId               String?              @unique(map: "REL_15baaa1eb6dd8d1f0a92a17d66") @db.Uuid
-  asUser               user?                @relation("asUser", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_15baaa1eb6dd8d1f0a92a17d667")
-  rejectedRequests     request_permission[] @relation("requests_rejectedByAgent")
-  requestedRequests    request_permission[] @relation("requests_forAgent")
-  approvedRequests     request_permission[] @relation("requests_approvedByAgent")
-  assignedAsSupervisor supervisors_agents[] @relation("supervisors_agents_assignedAsSupervisor")
-  assignedAsAgent      supervisors_agents[] @relation("supervisors_agents_assignedAsAgent")
-  ticket               ticket[]
-}
-
 model category {
-  id           String     @id(map: "PK_9c4e4a89e3674fc9f382d733f03") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  categoryName String     @unique(map: "UQ_cb776c7d842f8375b60273320dc") @db.VarChar(150)
-  created_at   DateTime   @default(now()) @db.Timestamp(6)
-  updated_at   DateTime   @default(now()) @db.Timestamp(6)
-  engineer     engineer[]
+  id           String   @id(map: "PK_9c4e4a89e3674fc9f382d733f03") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryName String   @unique(map: "UQ_cb776c7d842f8375b60273320dc") @db.VarChar(150)
+  created_at   DateTime @default(now()) @db.Timestamp(6)
+  updated_at   DateTime @default(now()) @db.Timestamp(6)
   ticket       ticket[]
+  user         user[]
 }
 
 model comment {
@@ -35,8 +22,8 @@ model comment {
   created_at DateTime @default(now()) @db.Timestamp(6)
   ticketId   String?  @db.Uuid
   userId     String?  @db.Uuid
+  user       user?    @relation(fields: [userId], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_1a0a9c69d17cfb196d090858bc8")
   ticket     ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_7522f1f6b36fa4b1742762a17f9")
-  user       user?    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_c0354a9a009d3bb45a08655ce3b")
 }
 
 model customer {
@@ -61,16 +48,6 @@ model dependent_tickets {
   @@index([ticketCustomId], map: "IDX_d0a5777578b2a55063f8f2c474")
 }
 
-model engineer {
-  engineerId         String               @id(map: "PK_460c1a7044eb006e30bbbc688da") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  engineerOwnEmail   String?              @db.VarChar(150)
-  categoryId         String?              @db.Uuid
-  userId             String?              @unique(map: "REL_8d9c64597951e26c9632bf8c7a") @db.Uuid
-  assigned_engineers assigned_engineers[]
-  category           category?            @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_3f3a393bf2252f0eb9c0ffe63ec")
-  asUser             user?                @relation("asUser", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_8d9c64597951e26c9632bf8c7ad")
-}
-
 model request_permission {
   request_id       String    @id(map: "PK_b928279192dbf9e8d5ada868ee3") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   request_status   String    @db.VarChar
@@ -85,9 +62,9 @@ model request_permission {
   approvedBy       String?   @db.Uuid
   rejectedBy       String?   @db.Uuid
   requestForAgent  String?   @db.Uuid
-  rejectedByAgent  agent?    @relation("requests_rejectedByAgent", fields: [rejectedBy], references: [agentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_3febbe2d24e5e498540ef0e6917")
-  requestedByAgent agent?    @relation("requests_forAgent", fields: [requestForAgent], references: [agentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_9e2484029aed83d6f8e0cdfda09")
-  approvedByAgent  agent?    @relation("requests_approvedByAgent", fields: [approvedBy], references: [agentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_a28922aee4e01f58a1085db2d68")
+  rejectedByAgent  user?     @relation("requests_rejectedByAgent", fields: [rejectedBy], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_3febbe2d24e5e498540ef0e6917")
+  requestedByAgent user?     @relation("requests_forAgent", fields: [requestForAgent], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_9e2484029aed83d6f8e0cdfda09")
+  approvedByAgent  user?     @relation("requests_approvedByAgent", fields: [approvedBy], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_a28922aee4e01f58a1085db2d68")
 }
 
 model role {
@@ -108,56 +85,53 @@ model ticket {
   due_date                 DateTime?            @db.Timestamp(6)
   cancelled_date           DateTime?            @db.Timestamp(6)
   re_opened_date           DateTime?            @db.Timestamp(6)
-  agentId                  String               @db.Uuid
+  userAgentId              String               @db.Uuid
   customerId               String               @db.Uuid
   categoryId               String               @db.Uuid
   assigned_engineers       assigned_engineers[]
   comment                  comment[]
   dependent_tickets_child  dependent_tickets[]  @relation("dependent_tickets_child")
   dependent_tickets_parent dependent_tickets[]  @relation("dependent_tickets_parent")
+  userAgent                user                 @relation(fields: [userAgentId], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_561eeb74b28cbf8b6b5cae6bc92")
   customer                 customer             @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_8932781487db15d1393b206482e")
-  agent                    agent                @relation(fields: [agentId], references: [agentId], onDelete: NoAction, onUpdate: NoAction, map: "FK_f5989db50fbbea2647f37d0d4d1")
   category                 category             @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ffa1e18b27ae5dfb0988873354a")
 }
 
-model supervisors_agents {
-  id                                      String   @id(map: "PK_7edf180f8d708c3e058eee014ec") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  assigned_at                             DateTime @default(now()) @db.Timestamp(6)
-  supervisor                              String?  @db.Uuid
-  agent                                   String?  @db.Uuid
-  supervisors_agents_assignedAsSupervisor agent?   @relation("supervisors_agents_assignedAsSupervisor", fields: [supervisor], references: [agentId], onUpdate: NoAction, map: "FK_0a5c0fcadda694cbbaba23e5771")
-  supervisors_agents_assignedAsAgent      agent?   @relation("supervisors_agents_assignedAsAgent", fields: [agent], references: [agentId], onUpdate: NoAction, map: "FK_c55285a52519da722bf35fdf201")
-
-  @@unique([supervisor, agent], map: "UQ_8606beeeb710838423ee61ebb2b")
-}
-
 model user {
-  id                     String                   @id(map: "PK_cace4a159ff9f2512dd42373760") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userName               String                   @db.VarChar(255)
-  userEmail              String                   @unique(map: "UQ_85432bb369f1a54116c4e4d2ee2") @db.VarChar(150)
-  userPassword           String                   @db.VarChar
-  tokenVersion           Int                      @default(1)
-  created_at             DateTime                 @default(now()) @db.Timestamp(6)
-  updated_at             DateTime                 @default(now()) @db.Timestamp(6)
-  last_logged_at         DateTime                 @default(now()) @db.Timestamp(6)
-  roleId                 String?                  @db.Uuid
-  agent                  agent?                   @relation("asUser")
-  comment                comment[]
-  engineer               engineer?                @relation("asUser")
-  notifications          notification[]
-  notification_listeners notification_listeners[]
-  role                   role?                    @relation(fields: [roleId], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_c28e52f758e7bbc53828db92194")
+  userName                     String                   @db.VarChar(255)
+  userEmail                    String                   @unique(map: "UQ_85432bb369f1a54116c4e4d2ee2") @db.VarChar(150)
+  userPassword                 String                   @db.VarChar
+  tokenVersion                 Int                      @default(1)
+  created_at                   DateTime                 @default(now()) @db.Timestamp(6)
+  updated_at                   DateTime                 @default(now()) @db.Timestamp(6)
+  last_logged_at               DateTime                 @default(now()) @db.Timestamp(6)
+  roleId                       String?                  @db.Uuid
+  userId                       String                   @id(map: "PK_d72ea127f30e21753c9e229891e") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userOwnEmail                 String?                  @db.VarChar(150)
+  categoryForEngineersId       String?                  @db.Uuid
+  assigned_engineers           assigned_engineers[]
+  comment                      comment[]
+  notifications                notification[]
+  notification_listeners       notification_listeners[]
+  rejectedRequests             request_permission[]     @relation("requests_rejectedByAgent")
+  requestedRequests            request_permission[]     @relation("requests_forAgent")
+  approvedRequests             request_permission[]     @relation("requests_approvedByAgent")
+  supervisors_users_supervisor supervisors_users[]      @relation("supervisors_users_supervisor")
+  supervisors_users_user       supervisors_users[]      @relation("supervisors_users_user")
+  ticket                       ticket[]
+  category                     category?                @relation(fields: [categoryForEngineersId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_bf5be5feb27c5c806aa66c787f8")
+  role                         role?                    @relation(fields: [roleId], references: [role_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_c28e52f758e7bbc53828db92194")
 }
 
 model assigned_engineers {
-  ticketCustomId String   @db.VarChar(10)
-  engineerId     String   @db.Uuid
-  engineer       engineer @relation(fields: [engineerId], references: [engineerId], onDelete: SetNull, onUpdate: NoAction, map: "FK_34f3a4442d2ae011e50a87140a7")
-  ticket         ticket   @relation(fields: [ticketCustomId], references: [customTicketId], onDelete: Cascade, map: "FK_cb4e7d45fb2f7a03af2ae0a296c")
+  ticketCustomId String @db.VarChar(10)
+  userEngineerId String @db.Uuid
+  user           user   @relation(fields: [userEngineerId], references: [userId], onDelete: SetNull, onUpdate: NoAction, map: "FK_6b2c75379b00f0466518a6e63d7")
+  ticket         ticket @relation(fields: [ticketCustomId], references: [customTicketId], onDelete: Cascade, map: "FK_cb4e7d45fb2f7a03af2ae0a296c")
 
-  @@id([ticketCustomId, engineerId], map: "PK_98c4c6347920f8ebfecee4351ab")
-  @@index([engineerId], map: "IDX_34f3a4442d2ae011e50a87140a")
+  @@id([ticketCustomId, userEngineerId], map: "PK_de08d2f4e63e184cdf0158544e5")
   @@index([ticketCustomId], map: "IDX_cb4e7d45fb2f7a03af2ae0a296")
+  @@index([userEngineerId], map: "IDX_6b2c75379b00f0466518a6e63d")
 }
 
 model notification {
@@ -167,17 +141,28 @@ model notification {
   created_at             DateTime                 @default(now()) @db.Timestamp(6)
   customTicketId         String                   @db.Char(9)
   userActed              String?                  @db.Uuid
-  user                   user?                    @relation(fields: [userActed], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_1af943652a5d7b70f1c18afbbda")
+  user                   user?                    @relation(fields: [userActed], references: [userId], onDelete: Cascade, onUpdate: NoAction, map: "FK_1af943652a5d7b70f1c18afbbda")
   notification_listeners notification_listeners[]
 }
 
 model notification_listeners {
   notificationId String       @db.Uuid
   userId         String       @db.Uuid
-  user           user         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_68a339aa7a4bf283124eb707948")
+  user           user         @relation(fields: [userId], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_68a339aa7a4bf283124eb707948")
   notification   notification @relation(fields: [notificationId], references: [id], onDelete: Cascade, map: "FK_f9fdc4aadaa9991b333a0048cdc")
 
   @@id([notificationId, userId], map: "PK_9c3486dc31713315bc6538ecd5f")
   @@index([userId], map: "IDX_68a339aa7a4bf283124eb70794")
   @@index([notificationId], map: "IDX_f9fdc4aadaa9991b333a0048cd")
+}
+
+model supervisors_users {
+  id                           String   @id(map: "PK_d6c42d1ed2f6daf18650ae4a6ed") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  assigned_at                  DateTime @default(now()) @db.Timestamp(6)
+  supervisor                   String?  @db.Uuid
+  user                         String?  @db.Uuid
+  supervisors_users_supervisor user?    @relation("supervisors_users_supervisor", fields: [supervisor], references: [userId], onUpdate: NoAction, map: "FK_7d0b7cd3db17cc67b1f1afc2807")
+  supervisors_users_user       user?    @relation("supervisors_users_user", fields: [user], references: [userId], onUpdate: NoAction, map: "FK_36e7c58181fa3d334ee6a21805d")
+
+  @@unique([supervisor, user], map: "UQ_6a47a3a5952d27dfc61ba220b5d")
 }

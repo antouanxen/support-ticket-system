@@ -56,5 +56,5 @@ import { NotificationInterceptor } from "./interceptors/notification.interceptor
 export class AppModule {}
 
 // To dos:
-// Tickets are now cancel-able and can be re-opened. Assigned Engineers can now get Un-Assigned. Tickets-api for updating both status and priority. Working for file-attachments.
+// Tickets are now cancel-able and can be re-opened. Tickets-api for updating both status and priority. Working for file-attachments.
 // File attachments such as pdfs and images are now working in the app. Priority is now date-related and can get updated automatically after some certain amount of time has passed.

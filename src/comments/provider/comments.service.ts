@@ -22,7 +22,7 @@ export class CommentsService {
                 data: { 
                     content: content,
                     ticket: { connect: { id: ticket.id } },
-                    user: { connect: { id: userId } }
+                    user: { connect: { userId: userId } }
                 
                 },
                 select: {

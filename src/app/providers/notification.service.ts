@@ -28,7 +28,7 @@ export class NotificationService {
 
     // βρισκω το χρηστη που κανει την ενεργεια αναλογα το userId
     const userWhoActed = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { userId: userId },
     });
 
     // φτιαχνω ενα νεο Set<string> για να μπορω μετα να κανω το φιλτραρισμα αναλογα με το υπαρχον content που εχει να κανει σχεση με το ιδιο το action
@@ -64,7 +64,7 @@ export class NotificationService {
           content = await this.createNotificationContent(
             action as Notification_action,
             customTicketId,
-            userWhoActed.id,
+            userWhoActed.userId,
           );
         }
 
@@ -76,9 +76,9 @@ export class NotificationService {
               : (action as Notification_ownAction),
             content: content,
             customTicketId: customTicketId ? customTicketId : null,
-            userActed: userWhoActed.id,
+            userActed: userWhoActed.userId,
             notification_listeners: {
-              create: { userId: userListener.id },
+              create: { userId: userListener.userId },
             },
           },
         });
@@ -107,7 +107,7 @@ export class NotificationService {
 
     // βρισκω τον χρηστη, αλλα και το ticket απο το customTicketId
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { userId: userId },
       select: { userName: true },
     });
     const ticket = await prisma.ticket.findUnique({
@@ -217,7 +217,7 @@ export class NotificationService {
   // με τη μεθοδο εδω παιρνω ολους τους users/αποδεκτες εκτος του ιδιου του user που κανει την ενεργεια
   public async getUsersToNotify(action: Notification_action, userId: string) {
     const usersToNotify = await prisma.user.findMany({
-      where: { id: { not: userId } },
+      where: { userId: { not: userId } },
       include: { role: { select: { role_description: true } } },
     });
 

@@ -2,7 +2,7 @@ import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common
 import { JwtService } from '@nestjs/jwt';
 import authConfig from '../config/authConfig';
 import { ConfigType } from '@nestjs/config';
-import { agent, user } from '@prisma/client';
+import { user } from '@prisma/client';
 
 @Injectable()
 export class GenerateTokensService {
@@ -31,8 +31,8 @@ export class GenerateTokensService {
     public async generateTokens(user: user) {
         try {
             const [accessToken, refreshToken] = await Promise.all([
-                this.signToken(user.id, this.jwtConfig.accessTokenTTL, { email: user.userEmail, tokenVersion: user.tokenVersion }),
-                this.signToken(user.id, this.jwtConfig.refreshTokenTTL, { tokenVersion: user.tokenVersion })
+                this.signToken(user.userId, this.jwtConfig.accessTokenTTL, { email: user.userEmail, tokenVersion: user.tokenVersion }),
+                this.signToken(user.userId, this.jwtConfig.refreshTokenTTL, { tokenVersion: user.tokenVersion })
             ]);
         
             return { accessToken, refreshToken };

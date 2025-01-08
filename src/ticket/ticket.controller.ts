@@ -79,7 +79,7 @@ export class TicketController {
         
         console.log('Kάνεις ενα ticket assign σε engineer(s)')
         const ticketAssigned = await this.ticketService.assignTicketToEng(customTicketId, body.engineerIds, userId)
-        const engineersAssigned = await prisma.user.findMany({ where: { id: { in: body.engineerIds } } })
+        const engineersAssigned = await prisma.user.findMany({ where: { userId: { in: body.engineerIds } } })
         const engineersNames = engineersAssigned.map(eng => eng.userName)
     
         if (ticketAssigned) {
@@ -184,8 +184,7 @@ export class TicketController {
         if (singleTicket) {
             console.log('Οριστε το ticket', singleTicket)
             return res.status(200).json(singleTicket)
-        }   
-        else {
+        } else {
             console.log(`Δεν υπαρχει αυτο το ticket με ID: ${customTicketId}`)
             return res.status(404).json({ message: 'That ticket was not found'})
         } 

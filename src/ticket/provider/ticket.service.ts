@@ -18,6 +18,7 @@ import { DependentTicketService } from "./dependent-ticket.service";
 import { GenerateCustomTicketIdService } from "./generate-custom-ticket-id.service";
 import { AssignTicketsByCatToEngsService } from "./assign-tickets-by-cat-to-engs.service";
 import { isUUID } from "class-validator";
+import { AuthRoles } from 'src/authentication/enums/roles.enum';
 
 @Injectable()
 export class TicketService {
@@ -46,7 +47,7 @@ export class TicketService {
       engineerIds,
     } = createTicketDto;
 
-    const agent = await prisma.agent.findUnique({
+    const agent = await prisma.user.findUnique({
       where: { userId: userId },
     });
 
@@ -60,7 +61,7 @@ export class TicketService {
       const newTicket = await prisma.ticket.create({
         data: {
           customerId: customer.id,
-          agentId: agent.agentId,
+          userAgentId: agent.userId,
           issue_description: issue_description,
           priority: priority,
           categoryId: category.id,
@@ -103,13 +104,7 @@ export class TicketService {
           return newTicket;
         } else {
           await Promise.all(
-            availableEngs.map(
-              async (engineer) =>
-                await this.engineerService.getEngineerTicket(
-                  newTicket.customTicketId,
-                  engineer.engineerId,
-                ),
-            ),
+            availableEngs.map(async (engineer) => await this.engineerService.getEngineerTicket(newTicket.customTicketId, engineer.userId)),
           );
           console.log("Εγινε αυτοματα η αναθεση");
         }
@@ -134,14 +129,12 @@ export class TicketService {
       }
       console.log("ticket was not created", err);
       await prisma.ticket.delete({ where: { customTicketId: customTicketId } });
-      throw new InternalServerErrorException(
-        "There was an error with the server. Try again",
-      );
+      throw new InternalServerErrorException("There was an error with the server. Try again");
     }
   }
 
   public async assignTicketToEng(customTicketId: string, engineerIds: string[], userId: string) {
-    const agent = await prisma.agent.findUnique({
+    const agent = await prisma.user.findUnique({
       where: { userId: userId },
     });
 
@@ -158,13 +151,12 @@ export class TicketService {
       try {
         const userEngineers = await prisma.user.findMany({
           where: {
-            id: {
+            userId: {
               in: Array.isArray(engineerIds) ? engineerIds : [engineerIds],
             },
           },
           select: {
-            id: true, userName: true, userEmail: true,
-            engineer: { select: { engineerId: true } } 
+            userId: true, userName: true, userEmail: true, 
           },
         });
 
@@ -175,24 +167,24 @@ export class TicketService {
         const existingAssignments = await Promise.all(userEngineers.map(async (userEngineer) => {
           return await prisma.assigned_engineers.findUnique({
               where: {
-                ticketCustomId_engineerId: {
-                  engineerId: userEngineer.engineer.engineerId,
+                ticketCustomId_userEngineerId: {
+                  userEngineerId: userEngineer.userId,
                   ticketCustomId: ticket.customTicketId,
                 }
               },
-              include: { engineer: { select: { asUser: { select: { userName: true } } } } }
+              include: { user: { select: { userName: true } } } 
             });
         }));
         
         const alreadyAssignedEngineers = userEngineers.filter((_, index) => existingAssignments[index] !== null)
         
         if (alreadyAssignedEngineers.length > 0) {
-          const userNames = existingAssignments.map(eng => eng?.engineer?.asUser?.userName).join(', ')
+          const userNames = existingAssignments.map(eng => eng?.user?.userName).join(', ')
           throw new ConflictException(`Ticket is already assigned to the following engineer(s): ${userNames}. Pick a different one`);
         } 
 
         await Promise.all(userEngineers.map(async (userEngineer) => {
-          await this.engineerService.getEngineerTicket(ticket.customTicketId, userEngineer.engineer.engineerId);
+          await this.engineerService.getEngineerTicket(ticket.customTicketId, userEngineer.userId);
 
           const newTicketEmailData: NewTicketEmailData = {
             engineer_email: userEngineer.userEmail,
@@ -205,7 +197,7 @@ export class TicketService {
   
           await this.mailService.sendEmailForNewTicket(newTicketEmailData);
           console.log("πηγε το εμαιλ για το νεο ticket");
-          console.log(`Φτιαχτηκε μια σχεση με τον engineer με ID: ${userEngineer.engineer.engineerId} και το ticket με ID: ${ticket.customTicketId}`)
+          console.log(`Φτιαχτηκε μια σχεση με τον engineer με ID: ${userEngineer.userId} και το ticket με ID: ${ticket.customTicketId}`)
         }))
        
         return true;
@@ -223,7 +215,7 @@ export class TicketService {
   }
 
   public async unAssignTicketFromEng(customTicketId: string, engineerIds: string[], userId: string) {
-    const agent = await prisma.agent.findUnique({
+    const agent = await prisma.user.findUnique({
       where: { userId: userId }
     })
 
@@ -239,13 +231,12 @@ export class TicketService {
       try {
         const userEngineers = await prisma.user.findMany({
           where: {
-            id: {
+            userId: {
               in: Array.isArray(engineerIds) ? engineerIds : [engineerIds],
             },
           },
           select: {
-            id: true, userName: true, userEmail: true,
-            engineer: { select: { engineerId: true } } 
+            userId: true, userName: true, userEmail: true 
           },
         });
 
@@ -256,24 +247,23 @@ export class TicketService {
         const engineersToBeUnassigned = await Promise.all(userEngineers.map(async (userEngineer) => {
           return await prisma.assigned_engineers.delete({
             where: {
-              ticketCustomId_engineerId: {
-                engineerId: userEngineer.engineer.engineerId,
+              ticketCustomId_userEngineerId: {
+                userEngineerId: userEngineer.userId,
                 ticketCustomId: ticket.customTicketId
               }
             },
             select: {
-              engineer: {
+              user: {
                 select: { 
-                  engineerId: true, 
-                  asUser: { select: { id: true, userName: true, userEmail: true } } 
+                  userId: true, userName: true, userEmail: true 
                 } 
-              }
+              } 
             }
           })
         }))
 
         if (engineersToBeUnassigned.length > 0) {
-          const unAssignmentLogs = engineersToBeUnassigned.map(userEngineer => userEngineer.engineer.asUser.userName).join(', ')
+          const unAssignmentLogs = engineersToBeUnassigned.map(userEngineer => userEngineer.user.userName).join(', ')
           console.log(`You have unassigned the following engineer/s: ${unAssignmentLogs} from ticket ${ticket.customTicketId}`)
 
           return `You have unassigned the following engineer/s: ${unAssignmentLogs} from ticket ${ticket.customTicketId}`
@@ -289,17 +279,17 @@ export class TicketService {
   }
 
   public async getAllTickets(sortTicketsDto: SortTicketsDto, userId: string): Promise<ticket[]> {
-    const agent = await prisma.agent.findUnique({
-      where: { userId: userId },
+    const agent = await prisma.user.findUnique({
+      where: { userId: userId, role: { role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
+      include: { role: true, category: true }
     });
 
-    const engineerByCategory = await prisma.engineer.findUnique({
+    const engineerByCategory = await prisma.user.findUnique({
       where: { userId: userId },
-      include: { category: true },
+      include: { role: true, category: true },
     });
 
-    if (!agent && !engineerByCategory)
-      throw new NotFoundException("User does not exist");
+    if (!agent && !engineerByCategory) throw new NotFoundException("User does not exist");
 
     const categoryId = engineerByCategory?.category?.id;
 
@@ -310,26 +300,23 @@ export class TicketService {
         include: {
           category: true,
           customer: true,
-          comment: true,
-          agent: {
-            select: {
-              asUser: { select: { id: true, userName: true, userEmail: true } },
-            },
-          },
           dependent_tickets_parent: true ,
           dependent_tickets_child: true ,
           assigned_engineers: {
             select: {
-              engineer: {
+              user: {
                 select: {
-                  asUser: {
-                    select: { id: true, userName: true, userEmail: true },
-                  },
-                },
+                  userId: true, userName: true, userEmail: true 
+                },             
               },
             },
           },
-        },
+          userAgent: {
+            select: {
+               userId: true, userName: true, userEmail: true 
+              },
+            },
+          },
       });
 
       const ticketListFound = async (ticketData: typeof ticketListToBeFound) => {
@@ -360,52 +347,44 @@ export class TicketService {
       const singleTicket = await prisma.ticket.findUnique({
         where: { customTicketId: customTicketId },
         include: {
-          category: {
-            include: {
-              engineer: {
-                select: {
-                  asUser: {
-                    select: { id: true, userName: true, userEmail: true },
-                  },
-                },
-              },
-            },
-          },
+          category: true,
           customer: true,
           comment: true,
-          agent: {
-            select: {
-              asUser: { select: { id: true, userName: true, userEmail: true } },
-            },
-          },
           dependent_tickets_parent: true,
           dependent_tickets_child: true,
           assigned_engineers: {
             select: {
-              engineer: {
+              user: {
                 select: {
-                  asUser: {
-                    select: { id: true, userName: true, userEmail: true },
-                  },
+                  userId: true, userName: true, userEmail: true            
                 },
               },
             },
           },
-        },
+          userAgent: {
+            select: {
+                userId: true, userName: true, userEmail: true 
+              }
+            },
+          },
       });
+
+      if (!singleTicket) {
+        throw new NotFoundException(`Could not find the ticket with customTicketId: ${customTicketId}`);
+      }
 
       const ticketFetched = {
         ...singleTicket,
-        dependent_tickets_child: singleTicket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId),
-        dependent_tickets_parent: singleTicket.dependent_tickets_child.map(child => child.ticketCustomId)
+        dependent_tickets_child: singleTicket.dependent_tickets_parent ? singleTicket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId) : null,
+        dependent_tickets_parent: singleTicket.dependent_tickets_child ? singleTicket.dependent_tickets_child.map(child => child.ticketCustomId) : null
       }
 
       return ticketFetched;
     } catch (err: any) {
+      if (err instanceof NotFoundException) throw err
+
       console.log("Could not find the ticket", err);
-      throw new InternalServerErrorException(
-        "There was an error with the server. Try again",
-      );
+      throw new InternalServerErrorException("There was an error with the server. Try again");
     }
   }
 
@@ -433,7 +412,7 @@ export class TicketService {
           dependent_tickets_parent: {
             select: { dependentTicketCustomId: true },
           },
-          assigned_engineers: { select: { engineerId: true } },
+          assigned_engineers: { select: { userEngineerId: true } },
         },
       });
 

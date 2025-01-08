@@ -30,7 +30,7 @@ export class AccessTokenGuard implements CanActivate {
         });
         const user = payload?.sub
           ? await prisma.user.findUnique({
-              where: { id: payload.sub },
+              where: { userId: payload.sub },
               include: { role: true },
             })
           : null;
@@ -57,7 +57,7 @@ export class AccessTokenGuard implements CanActivate {
         });
         const user = payload?.sub
           ? await prisma.user.findUnique({
-              where: { id: payload.sub },
+              where: { userId: payload.sub },
               include: { role: true },
             })
           : null;

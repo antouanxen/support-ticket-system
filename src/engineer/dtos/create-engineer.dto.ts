@@ -23,11 +23,11 @@ export class CreateEngineerDto {
 
     @IsOptional()
     @IsString()  
-    role?: AuthRoles = AuthRoles.ENGINEER
+    role_description?: AuthRoles = AuthRoles.ENGINEER
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    category: string
+    categoryName?: string
 
     constructor(partial: Partial<CreateEngineerDto>) {
         Object.assign(this, partial);

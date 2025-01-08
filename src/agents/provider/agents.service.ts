@@ -7,6 +7,7 @@ import { UpdateAgentStatsDto } from '../dtos/update-agent.dto';
 import { RequestPermissionService } from 'src/request-permission/provider/request-permission.service';
 import { AssignAgentDto } from '../dtos/assignAgent.dto';
 import { RequestStatus } from 'src/request-permission/enums/request_status.enum';
+import { AuthRoles } from 'src/authentication/enums/roles.enum';
 
 @Injectable()
 export class AgentsService {
@@ -22,12 +23,11 @@ export class AgentsService {
 
         try {
             const allAgents = await prisma.user.findMany({
-                where: { agent: { NOT: null } },
+                where: { role: { role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
                 select: { 
-                    id: true,
+                    userId: true,
                     userName: true,
                     userEmail: true,
-                    last_logged_at: true,
                     role: { select: { role_description: true } },
                 }
             }) 
@@ -46,12 +46,11 @@ export class AgentsService {
 
         try {
             const allAgentWithRoles = await prisma.user.findMany({
-                where: { roleId: { not: null }, agent: { NOT: null } },
+                where: { role: { NOT: null, role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
                 select: { 
-                    id: true,
+                    userId: true,
                     userName: true,
                     userEmail: true,
-                    last_logged_at: true,
                     role: { select: { role_description: true } },
                 }
             }) 
@@ -70,9 +69,9 @@ export class AgentsService {
 
         try {
             const allAgentsLogs = await prisma.user.findMany({
-                where: { agent: { NOT: null } },
+                where: { role: { role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
                 select: { 
-                    id: true,
+                    userId: true,
                     userName: true,
                     userEmail: true,
                     last_logged_at: true,
@@ -94,20 +93,17 @@ export class AgentsService {
 
     public async getSingleAgent(agentIdTofind: string) {
         try {
-            const agentToFind = await prisma.agent.findUnique({
-                where: { agentId: agentIdTofind },
+            const agentToFind = await prisma.user.findFirst({
+                where: { 
+                    userId: agentIdTofind,
+                    role: { role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
                 select: {
-                    agentId: true,
-                    agentOwnEmail: true, 
-                    asUser: {
-                        select: {
-                            id: true,
-                            userName: true,
-                            userEmail: true,
-                            last_logged_at: true,
-                            role: { select: { role_description: true } }
-                        }       
-                    }
+                    userId: true,
+                    userOwnEmail: true, 
+                    userName: true,
+                    userEmail: true,
+                    last_logged_at: true,
+                    role: { select: { role_description: true } }
                 }
             })
 
@@ -130,23 +126,21 @@ export class AgentsService {
         if (supervisorId === agentIdToGetAssigned) throw new BadRequestException('An agent cannot get assigned to themselves.')
         try {
             const [supervisor, agentToGetAssigned] = await Promise.all([ 
-                prisma.agent.findUnique({ 
+                prisma.user.findUnique({ 
                     where: { userId: supervisorId },
-                    include: { asUser: true }
                 }),
-                prisma.agent.findUnique({ 
-                    where: { userId: agentIdToGetAssigned},
-                    include: { asUser: true } 
+                prisma.user.findUnique({ 
+                    where: { userId: agentIdToGetAssigned}, 
                 })
             ])   
 
             let result: boolean = false
 
             try {
-                await prisma.supervisors_agents.create({ 
+                await prisma.supervisors_users.create({ 
                     data: {
-                        supervisor: supervisor.agentId,
-                        agent: agentToGetAssigned.agentId,
+                        supervisor: supervisor.userId,
+                        user: agentToGetAssigned.userId,
                         assigned_at: new Date()
                     }
                 })
@@ -158,7 +152,7 @@ export class AgentsService {
             
             // εδω θα στελνεται το εμαιλ στον SV για την αναθεση
 
-            console.log(`Η αναθεση μεταξυ supervisor (ID: ${supervisor.agentId}) & agent (ID: ${agentToGetAssigned.agentId}) ολοκληρωθηκε`)
+            console.log(`Η αναθεση μεταξυ supervisor (ID: ${supervisor.userId}) & agent (ID: ${agentToGetAssigned.userId}) ολοκληρωθηκε`)
             return result
         } catch (err) {
             console.log('there was an error getting the assignement completed', err)
@@ -174,7 +168,7 @@ export class AgentsService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const agentToUpdateRole = await prisma.agent.findUnique({
+            const agentToUpdateRole = await prisma.user.findUnique({
                 where: { userId: agentIdForRole }
             })
 
@@ -183,7 +177,7 @@ export class AgentsService {
             const roleForAgent = await this.roleService.findRoleByDesc(role_description)
 
             const updatedRoleForAgent = await prisma.user.update({
-                where: { id: agentToUpdateRole.userId},
+                where: { userId: agentToUpdateRole.userId},
                 data: {
                     roleId: roleForAgent.role_id,
                     updated_at: new Date()
@@ -207,15 +201,15 @@ export class AgentsService {
             
             if (approvedRequest && approvedRequest.requestForAgent === agentId) {
                 try {
-                    const agentToBeUpdated = await prisma.agent.findUnique({ where: { userId: agentId }, include: { asUser: true} })
+                    const agentToBeUpdated = await prisma.user.findUnique({ where: { userId: agentId } })
                     if (!agentToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
         
                     const updatedAgentWithPerm = await prisma.user.update({ 
-                        where: { id: agentToBeUpdated.userId },
+                        where: { userId: agentToBeUpdated.userId },
                         data: {
-                            userName: approvedRequest.agentName ?? agentToBeUpdated.asUser.userName,
-                            userEmail: approvedRequest.agentEmail ?? agentToBeUpdated.asUser.userEmail,
-                            userPassword: approvedRequest.agentPassword ?? agentToBeUpdated.asUser.userPassword
+                            userName: approvedRequest.agentName ?? agentToBeUpdated.userName,
+                            userEmail: approvedRequest.agentEmail ?? agentToBeUpdated.userEmail,
+                            userPassword: approvedRequest.agentPassword ?? agentToBeUpdated.userPassword
                         }
                     })
     
@@ -244,13 +238,13 @@ export class AgentsService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const agentToBeDeleted = await prisma.agent.findUnique({
+            const agentToBeDeleted = await prisma.user.findUnique({
                 where: { userId: agentIdToDelete }
             })
 
             if (!agentToBeDeleted) throw new NotFoundException('Agent not found');
 
-            await prisma.agent.delete({ where: { userId: agentIdToDelete } })
+            await prisma.user.delete({ where: { userId: agentIdToDelete } })
 
             return;
         } catch(err) {

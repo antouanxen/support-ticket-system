@@ -87,7 +87,7 @@ export class EngineerController {
         } else return res.status(404).json({ message: 'That engineer was not found' })
     }
 
-    @Patch(':engineerId')
+    @Patch(':engineerId/update_stats')
     @ApiOperation({ summary: 'Use this endpoint to update an engineer based on the body' })
     @ApiParam({
         name: 'engineerId', 
@@ -111,7 +111,7 @@ export class EngineerController {
         updateEngineerDto.engineerId = engineerId
 
         console.log('Ενημερωνεις ενα engineer')
-        const engineerUpdated = await this.engineerService.updateAnEngineerStats(updateEngineerDto, userId)
+        const engineerUpdated = await this.engineerService.updateEngineerStats(updateEngineerDto, userId)
 
         if (engineerUpdated) {
             console.log('Updated engineer:', engineerUpdated)

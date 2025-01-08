@@ -8,9 +8,8 @@ export class EngineerTicketsService {
 
     public async getEngineerTicket(newTicketCustomId: string, engineerId: string) {
       try {
-        const engineerExists = await prisma.engineer.findUnique({
-            where: { engineerId: engineerId },
-            include: { asUser: { select: { userName: true  } } }
+        const engineerExists = await prisma.user.findUnique({
+            where: { userId: engineerId }
         });
     
         if (!engineerExists) throw new NotFoundException('Engineer not found.');
@@ -18,7 +17,7 @@ export class EngineerTicketsService {
         await prisma.assigned_engineers.create({ 
             data: {
                 ticketCustomId: newTicketCustomId,
-                engineerId: engineerExists.engineerId
+                userEngineerId: engineerExists.userId
             }
         })
 

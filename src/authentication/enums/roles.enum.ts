@@ -3,5 +3,5 @@ export enum AuthRoles {
     MODERATOR = 'moderator',
     ADMIN = 'admin',
     ENGINEER = 'engineer',
-    TEAM_LEADER_ENG = 'team-leader engineer'
+    TEAM_LEADER_ENG = 'team-leader_engineer'
 }

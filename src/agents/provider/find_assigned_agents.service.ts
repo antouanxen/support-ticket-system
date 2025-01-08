@@ -9,11 +9,11 @@ export class FindAssignedAgentsService {
         if (!agentId) throw new NotFoundException('The ID for the agent is required.')
         
         try {
-            const assignedAgents = await prisma.supervisors_agents.findFirst({ 
-                where: { agent: agentId },
+            const assignedAgents = await prisma.supervisors_users.findFirst({ 
+                where: { user: agentId },
                 include: { 
-                    supervisors_agents_assignedAsSupervisor: true,
-                    supervisors_agents_assignedAsAgent: true,
+                    supervisors_users_supervisor: true,
+                    supervisors_users_user: true,
                     
                 }
             }) 

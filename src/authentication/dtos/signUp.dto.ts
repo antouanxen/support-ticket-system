@@ -20,21 +20,9 @@ export class SignUpDto {
     })
     password: string
 
-    @IsOptional() 
-    @IsNotEmpty()   
-    role: string | null;
-
     @IsOptional()
     @IsEmail()
-    agentOwnEmail?: string; 
-
-    @IsOptional()
-    @IsEmail()
-    engineerOwnEmail?: string;
-
-    @IsOptional()
-    @IsString()
-    category?: string
+    userOwnEmail?: string; 
 
     constructor(partial: Partial<SignUpDto>) {
         Object.assign(this, partial);

@@ -27,16 +27,8 @@ export class AssignTicketsByCatToEngsService {
                 where: { categoryName: categoryName }
             })
             
-            const engineersByCategory = await prisma.engineer.findMany({
-                where: { categoryId: categoryToBeAssigned.id },
-                include: {
-                    asUser: {
-                        select: {
-                            userName: true,
-                            userEmail: true
-                        }
-                    }
-                }
+            const engineersByCategory = await prisma.user.findMany({
+                where: { categoryForEngineersId: categoryToBeAssigned.id }
             })
             
             if (engineersByCategory.length === 0) throw new NotFoundException(`No engineers found for the category '${categoryName}'.`);
@@ -69,32 +61,24 @@ export class AssignTicketsByCatToEngsService {
                 where: { categoryName: categoryName }
             })
 
-            const engineersByCategory = await prisma.engineer.findMany({
-                where: { categoryId: categoryToBeAssigned.id },
-                include: {
-                    asUser: {
-                        select: {
-                            userName: true,
-                            userEmail: true
-                        }
-                    }
-                }
+            const engineersByCategory = await prisma.user.findMany({
+                where: { categoryForEngineersId: categoryToBeAssigned.id },
             })
 
             const assignedEngineers = await prisma.assigned_engineers.findMany({
                 where: {
-                    engineerId: { in: engineersByCategory.map(engineer => engineer.engineerId) } 
+                    userEngineerId: { in: engineersByCategory.map(engineer => engineer.userId) } 
                 }
             })
             console.log('Assigned Engineers:', assignedEngineers);
 
-            const assignedEngsIds = new Set(assignedEngineers.map(engineer => engineer.engineerId))
+            const assignedEngsIds = new Set(assignedEngineers.map(engineer => engineer.userEngineerId))
 
-            const availableEngineers = engineersByCategory.map(engineer => engineer.engineerId).filter(engineerId => !assignedEngsIds.has(engineerId))
+            const availableEngineers = engineersByCategory.map(engineer => engineer.userId).filter(engineerId => !assignedEngsIds.has(engineerId))
             console.log('Available Engineers:', availableEngineers);
 
-            const engineersToBeAssigned = await prisma.engineer.findMany({
-                where: { engineerId: { in: availableEngineers }}
+            const engineersToBeAssigned = await prisma.user.findMany({
+                where: { userId: { in: availableEngineers }}
             })
             console.log('Engineers to be assigned:', engineersToBeAssigned);
 

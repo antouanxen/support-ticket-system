@@ -1,19 +1,22 @@
 import { forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateEngineerDto } from '../dtos/create-engineer.dto';
-import { engineer, user } from '@prisma/client';
 import prisma from 'prisma/prisma_Client';
 import { UpdateEngineerDto } from '../dtos/update-engineer.dto';
 import { EngineerTicketsService } from './engineer-tickets.service';
 import { CategoryService } from 'src/category/provider/category.service';
 import { TicketService } from 'src/ticket/provider/ticket.service';
+import { user } from '@prisma/client';
+import { AuthRoles } from 'src/authentication/enums/roles.enum';
+import { RoleService } from 'src/role/provider/role.service';
 
 @Injectable()
 export class EngineerService {
     constructor(
         private readonly engineerTicketsService: EngineerTicketsService,
-        private readonly categoryService: CategoryService,
         @Inject(forwardRef(() => TicketService) )
-        private readonly ticketService: TicketService
+        private readonly ticketService: TicketService,
+        private readonly categoryService: CategoryService,
+        private readonly roleService: RoleService,
     ) {}
 
     public async createEngineer(createEngineerDto: CreateEngineerDto, userId: string): Promise<Partial<CreateEngineerDto> | { message: string }> {
@@ -28,29 +31,24 @@ export class EngineerService {
 
             if (existingEngineer) return { message: 'The email already exists for an engineer.' };
 
-            const category = await this.categoryService.getSingleCategoryByName(createEngineerDto.category)
+            const category = await this.categoryService.getSingleCategoryByName(createEngineerDto.categoryName)
             
             const newEngineer = await prisma.user.create({
                 data: {
                     userName: createEngineerDto.engineer_name ?? (createEngineerDto.engineer_email.split('@')[0] || 'new-user'),
                     userEmail: createEngineerDto.engineer_email,
-                    userPassword: createEngineerDto.engineer_password
-                }
-            })
-
-            const newEngineerWithCategory = await prisma.engineer.create({
-                data: {
-                    userId: newEngineer.id,
-                    engineerOwnEmail: createEngineerDto.engineerOwnEmail ?? null,
-                    categoryId: category.id
-                }
+                    userPassword: createEngineerDto.engineer_password,
+                    userOwnEmail: createEngineerDto.engineerOwnEmail ?? null,
+                    categoryForEngineersId: category.id
+                },
+                include: { category: true }
             })
 
             return new CreateEngineerDto({
                 engineer_name: newEngineer.userName,
                 engineer_email: newEngineer.userEmail,
-                engineerOwnEmail: newEngineerWithCategory.engineerOwnEmail,
-                category: createEngineerDto.category
+                engineerOwnEmail: newEngineer.userOwnEmail,
+                categoryName: newEngineer.category.categoryName
             })
         } catch(err) {
             console.log('Engineer was not created', err)
@@ -58,16 +56,14 @@ export class EngineerService {
         }
     } 
 
-    public async findSingleEngineer(engineerId: string): Promise<engineer> {
+    public async findSingleEngineer(engineerId: string) {
         try {
-            const singleEngineer = await prisma.engineer.findUnique({ 
+            const singleEngineer = await prisma.user.findUnique({ 
                 where: { userId: engineerId },
-                include: {
-                    asUser: {
-                        select: {
-                            id: true, userName: true, userEmail: true
-                        }
-                    } 
+                select: {
+                    userId: true,
+                    userName: true,
+                    userEmail: true 
                 }
             })
 
@@ -92,26 +88,23 @@ export class EngineerService {
 
         try {
             const allEngineers = await prisma.user.findMany({
-                where: { engineer: { isNot: null } },
+                where: { role: { role_description: { in: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] }  } },
                 select: { 
-                    id: true,
+                    userId: true,
                     userName: true,
                     userEmail: true,
                     last_logged_at: true,
                     role: { select: { role_description: true } },
-                    engineer: {
+                    assigned_engineers: {
                         select: {
-                            assigned_engineers: {
-                                select: {
-                                    ticketCustomId: true 
-                                } 
-                            }, categoryId: true 
+                            ticketCustomId: true 
                         } 
-                    }
+                    }, 
+                    categoryForEngineersId: true   
                 }
             }) 
 
-            const allEngineersByCategory = allEngineers.filter(user => user.engineer.categoryId === ticket.categoryId)
+            const allEngineersByCategory = allEngineers.filter(user => user.categoryForEngineersId === ticket.categoryId)
 
             if (allEngineersByCategory.length === 0) return { message: 'There were no engineers matching that category in the database', engineers: []}
  
@@ -123,21 +116,26 @@ export class EngineerService {
         }
     }
 
-    public async updateAnEngineerStats(updateEngineerDto: UpdateEngineerDto, userId: string) {
+    public async updateEngineerStats(updateEngineerDto: UpdateEngineerDto, userId: string) {
         const agentId = userId
-        const { engineerId, engineer_email, engineer_name } = updateEngineerDto
+        const { engineerId, engineer_email, engineer_name, role_description, categoryName } = updateEngineerDto
 
         if (!agentId) throw new NotFoundException('User does not exist')
 
+        const role = await this.roleService.findRoleByDesc(role_description)
+        const category = await this.categoryService.getSingleCategoryByName(categoryName)
+
         try {
-            const engineerToBeUpdated = await prisma.engineer.findUnique({ where: { userId: engineerId }, include: { asUser: true } })
+            const engineerToBeUpdated = await prisma.user.findUnique({ where: { userId: engineerId } })
             if (!engineerToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
 
             const updatedEngineer = await prisma.user.update({ 
-                where: { id: engineerToBeUpdated.userId },
+                where: { userId: engineerToBeUpdated.userId },
                 data: {
-                    userName: engineer_name ?? engineerToBeUpdated.asUser.userName,
-                    userEmail: engineer_email ?? engineerToBeUpdated.asUser.userEmail,
+                    userName: engineer_name ?? engineerToBeUpdated.userName,
+                    userEmail: engineer_email ?? engineerToBeUpdated.userEmail,
+                    roleId: role.role_id ?? (engineerToBeUpdated.roleId || null),
+                    categoryForEngineersId: category.id ?? (engineerToBeUpdated.categoryForEngineersId || null)
                 },
                 
             })
@@ -155,13 +153,13 @@ export class EngineerService {
         if (!agentId) throw new NotFoundException('User does not exist')
 
         try {
-            const engineerToBeDeleted = await prisma.engineer.findUnique({
-                where: { engineerId: engineerId }
+            const engineerToBeDeleted = await prisma.user.findUnique({
+                where: { userId: engineerId }
             })
 
             if (!engineerToBeDeleted) throw new NotFoundException('Engineer not found');
 
-            await prisma.engineer.delete({ where: { engineerId: engineerId } })
+            await prisma.user.delete({ where: { userId: engineerId } })
 
             return;
         } catch(err) {

@@ -20,7 +20,7 @@ export class RequestPermissionService {
     ) {}
 
     public async requestForLeave(requestForLeaveDto: RequestForLeaveDto, userId: string) {
-        const agentExists = await prisma.agent.findUnique({ where: { userId: userId } });
+        const agentExists = await prisma.user.findUnique({ where: { userId: userId } });
 
         if (!agentExists) throw new NotFoundException('Agent not found');
 
@@ -36,21 +36,19 @@ export class RequestPermissionService {
                 }
             })
             
-            const assignedAgents = await this.findAssignedAgentsService.findAssignedAgents(agentExists.agentId)
+            const assignedAgents = await this.findAssignedAgentsService.findAssignedAgents(agentExists.userId)
 
-            const agentRequesting = await prisma.agent.findUnique({ 
-                where: { userId: assignedAgents.supervisors_agents_assignedAsAgent.agentId },
-                include: { asUser: true }
+            const agentRequesting = await prisma.user.findUnique({ 
+                where: { userId: assignedAgents.supervisors_users_user.userId },
             })
 
-            const agentRequestingSupervisor = await prisma.agent.findUnique({ 
-                where: { userId: assignedAgents.supervisors_agents_assignedAsSupervisor.agentId },
-                include: { asUser: true }
+            const agentRequestingSupervisor = await prisma.user.findUnique({ 
+                where: { userId: assignedAgents.supervisors_users_supervisor.userId },
             })
 
             const newRequestEmailData: NewRequestEmailData = {
-                agentEmail: agentRequesting.asUser.userEmail,
-                agentName: agentRequesting.asUser.userName, 
+                agentEmail: agentRequesting.userEmail,
+                agentName: agentRequesting.userName, 
                 requestType: newRequestForLeave.requestType,
                 request_id: newRequestForLeave.request_id
             }
@@ -58,12 +56,12 @@ export class RequestPermissionService {
             console.log('πηγε το εμαιλ για το νεο request')
 
             const agentRequestToSVEmailData : AgentRequestToSVEmailData = {
-                agentEmail: agentRequestingSupervisor.asUser.userEmail,
-                agentName: agentRequestingSupervisor.asUser.userName, 
+                agentEmail: agentRequestingSupervisor.userEmail,
+                agentName: agentRequestingSupervisor.userName, 
                 requestType: newRequestForLeave.requestType,
                 request_id: newRequestForLeave.request_id,
-                agentIdRequested: agentRequesting.asUser.id,
-                agentEmailRequested: agentRequesting.asUser.userEmail                
+                agentIdRequested: agentRequesting.userId,
+                agentEmailRequested: agentRequesting.userEmail                
             }
             await this.mailService.sendEmailForAgentRequestToSV(agentRequestToSVEmailData)
             console.log('πηγε το εμαιλ για το νεο request για εξεταση στον supervisor')
@@ -96,19 +94,17 @@ export class RequestPermissionService {
             
             const assignedAgents = await this.findAssignedAgentsService.findAssignedAgents(agentId)
 
-            const agentRequesting = await prisma.agent.findUnique({ 
-                where: { userId: assignedAgents.supervisors_agents_assignedAsAgent.agentId },
-                include: { asUser: true }
+            const agentRequesting = await prisma.user.findUnique({ 
+                where: { userId: assignedAgents.supervisors_users_user.userId },
             })
 
-            const agentRequestingSupervisor = await prisma.agent.findUnique({ 
-                where: { userId: assignedAgents.supervisors_agents_assignedAsSupervisor.agentId },
-                include: { asUser: true }
+            const agentRequestingSupervisor = await prisma.user.findUnique({ 
+                where: { userId: assignedAgents.supervisors_users_supervisor.userId },
             })
 
             const newRequestEmailData: NewRequestEmailData = {
-                agentEmail: agentRequesting.asUser.userEmail,
-                agentName: agentRequesting.asUser.userName, 
+                agentEmail: agentRequesting.userEmail,
+                agentName: agentRequesting.userName, 
                 requestType: newRequestForStatsUpdate.requestType,
                 request_id: newRequestForStatsUpdate.request_id
             }
@@ -116,12 +112,12 @@ export class RequestPermissionService {
             console.log('πηγε το εμαιλ για το νεο request')
 
             const agentRequestToSVEmailData : AgentRequestToSVEmailData = {
-                agentEmail: agentRequestingSupervisor.asUser.userEmail,
-                agentName: agentRequestingSupervisor.asUser.userName, 
+                agentEmail: agentRequestingSupervisor.userEmail,
+                agentName: agentRequestingSupervisor.userName, 
                 requestType: newRequestEmailData.requestType,
                 request_id: newRequestEmailData.request_id,
-                agentIdRequested: agentRequesting.asUser.id,
-                agentEmailRequested: agentRequesting.asUser.userEmail                
+                agentIdRequested: agentRequesting.userId,
+                agentEmailRequested: agentRequesting.userEmail                
             }
             await this.mailService.sendEmailForAgentRequestToSV(agentRequestToSVEmailData)
             console.log('πηγε το εμαιλ για το νεο request για εξεταση στον supervisor')
@@ -143,7 +139,7 @@ export class RequestPermissionService {
                 include: { requestedByAgent: true } 
             })
 
-            if (agentId === reqToProcess.requestedByAgent.agentId) {
+            if (agentId === reqToProcess.requestedByAgent.userId) {
                 console.log('O user εχει ιδιο id με αυτον που εκανε το request')
                 throw new ForbiddenException('You cannot approve or reject your own requests.')
             }
@@ -160,24 +156,19 @@ export class RequestPermissionService {
                 include: { 
                     requestedByAgent: {
                         select: {
-                            agentId: true, 
-                            asUser: {
-                                select: {
-                                    id: true,
-                                    userEmail: true,
-                                    userName: true,
-                                }
-                            }  
+                            userId: true, 
+                            userEmail: true,
+                            userName: true,                           
                         } 
                     } 
                 }
             })
 
-            const agentWhoRequested = await prisma.agent.findUnique({ where: { agentId: request.requestedByAgent.agentId }, include: { asUser: true } }) 
+            const agentWhoRequested = await prisma.user.findUnique({ where: { userId: request.requestedByAgent.userId } }) 
             const updateValidationEmailData : UpdateValidationEmailData = {
-                agentId: agentWhoRequested.agentId,  
-                agentEmail: agentWhoRequested.asUser.userEmail,
-                agentName: agentWhoRequested.asUser.userName, 
+                agentId: agentWhoRequested.userId,  
+                agentEmail: agentWhoRequested.userEmail,
+                agentName: agentWhoRequested.userName, 
                 request_id: request.request_id,
                 requestType: request.requestType,
                 request_status: request.request_status,            
@@ -259,14 +250,9 @@ export class RequestPermissionService {
                 include: { 
                     requestedByAgent: { 
                         select: {
-                            agentId: true, 
-                            asUser: {
-                                select: {
-                                    id: true,
-                                    userEmail: true,
-                                    userName: true,
-                                }
-                            }  
+                            userId: true, 
+                            userEmail: true,
+                            userName: true,
                         }
                     } 
                 }

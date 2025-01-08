@@ -62,7 +62,7 @@ export class RoleService {
                 select: {
                     user: {
                         select: {
-                            id: true,
+                            userId: true,
                             userEmail: true,
                             userName: true,
                             last_logged_at: true

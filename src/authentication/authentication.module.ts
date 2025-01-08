@@ -11,7 +11,7 @@ import { CategoryModule } from 'src/category/category.module';
 
 @Global()
 @Module({
-  imports: [ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider()), RoleModule, CategoryModule],
+  imports: [ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider()), RoleModule, CategoryModule, RoleModule],
   controllers: [AuthenticationController],
   providers: [AuthenticateService, HashingService, GenerateTokensService],
   exports: [AuthenticateService, GenerateTokensService]

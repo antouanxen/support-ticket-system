@@ -1,11 +1,13 @@
-import { Body, Controller, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, Res } from '@nestjs/common';
 import { AuthenticateService } from './providers/authenticate.service';
 import { SignInDto } from './dtos/signIn.dto';
 import { SignUpDto } from './dtos/signUp.dto';
 import { Request, Response } from 'express';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsPublic } from './decorators/is-public.decorator';
 import prisma from 'prisma/prisma_Client';
+import { Roles } from './decorators/roles.decorator';
+import { AuthRoles } from './enums/roles.enum';
 
 @Controller('auth')
 @ApiTags('Authentication')
@@ -66,7 +68,7 @@ export class AuthenticationController {
                 where: { userEmail: signInDto.email},
                 include: { role: true }
             })
-            const userId = user.id
+            const userId = user.userId
             const userRole = user.role ? user.role.role_description : 'agent'
 
             const { accessToken, refreshToken } = result
@@ -93,5 +95,61 @@ export class AuthenticationController {
 
         if (result) return res.status(200).json({ message: 'User signed off, token version updated.' })
         else return res.status(401).json({ message: 'User needs to sign in first.' })
+    }
+
+    @Get('all_users')
+    @ApiBearerAuth()
+    //@Roles([AuthRoles.ADMIN])
+    @ApiOperation({ summary: 'Use this endpoint to fetch all users from the database' })
+    @ApiResponse({ status: 200, description: 'All the users were fetched successfully' })
+    @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
+    @ApiResponse({ status: 404, description: 'No users were found' })
+    @ApiResponse({ status: 500, description: 'An error occured to the server' })  
+    public async getAllAgentsRoles(@Req() req: Request, @Res() res: Response) {
+        const user = req.res.locals.user
+        const userId = user.sub
+        console.log('Εδω παιρνεις ολους τους users της εφαρμογης')
+
+        const agentWithRolesList = await this.authenticateService.getAllUsers(userId)
+
+        if (agentWithRolesList && agentWithRolesList.length > 0) {
+            console.log('Οι agents με roles φτασανε')
+            console.log('Tο συνολο τους:', agentWithRolesList.length)
+
+            return res.status(200).json(agentWithRolesList)
+        } else return res.status(404).json({ message: 'No users were found' })
+    }
+
+    @Patch('user_role_update/:userIdTobeUpdated')
+    @ApiBearerAuth()
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
+    @ApiOperation({ summary: 'Use this endpoint to update a user role, based on the body' })
+    @ApiParam({
+        name: 'userIdTobeUpdated', 
+        schema: { type: 'string', example: '36fa11f2-3ac4-4e4b-9e76-c4db8d1ceec6', description: 'Parameter for the api. The ID of the USER' }
+    })
+    @ApiBody({
+        description: 'Fill the body requirements as shown below',
+        schema: { type: 'object', properties: {
+            role: { type: 'string', example: 'supervisor', description: 'An enum for the status of the ticket issued, use the example options as shown'},
+           }, 
+            required: ['status'] }, })
+    @ApiResponse({ status: 200, description: 'The user got his role updated successfully and gets stored in the database' })
+    @ApiResponse({ status: 400, description: 'Bad request. Could not update that user-role'})
+    @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
+    @ApiResponse({ status: 404, description: 'That role or user was not found' })
+    @ApiResponse({ status: 500, description: 'An error occured to the server' })
+    public async updateRoleForUser(@Param('userIdTobeUpdated') userIdTobeUpdated: string, @Body('role') role: AuthRoles, @Req() req: Request, @Res() res: Response) {
+        const user = req.res.locals.user
+        const userId = user.sub
+
+        console.log('Ενημερωνεις το role για τον user')
+        const userRoleToBeUpdated = await this.authenticateService.updateUserRole(userId, userIdTobeUpdated, role)
+
+        if (userRoleToBeUpdated) {
+            console.log('Νεος ρολος για τον user', userRoleToBeUpdated)
+            console.log('User role got updated')
+            return res.status(200).json({ message: `User ${userRoleToBeUpdated.userName} got a new role ${userRoleToBeUpdated.role.role_description}.`, userRoleToBeUpdated})
+        } else return res.status(400).json('There was an error with the request body. Try again')
     }
 }

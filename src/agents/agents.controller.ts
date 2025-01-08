@@ -18,7 +18,7 @@ export class AgentsController {
 
     @ApiBearerAuth()
     @Get()
-    @ApiOperation({ summary: 'Use this endpoint to fetch all agents from the database ' })
+    @ApiOperation({ summary: 'Use this endpoint to fetch all agents from the database' })
     @ApiResponse({ status: 200, description: 'All the agents were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'No agents were found' })
@@ -40,7 +40,7 @@ export class AgentsController {
 
     @ApiBearerAuth()
     @Get('roles')
-    @ApiOperation({ summary: 'Use this endpoint to fetch all agents from the database with roles' })
+    @ApiOperation({ summary: 'Use this endpoint to fetch all user-agents with roles from the database, excluding engineer-related roles' })
     @ApiResponse({ status: 200, description: 'All the agents with roles were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'No agents with roles were found' })
