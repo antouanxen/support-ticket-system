@@ -34,12 +34,13 @@ export class NotificationInterceptor implements NestInterceptor {
 
               // υστερα, παιρνω το customTicketId, απο τις παραμετρους/ερωτηματα του request, ή απο το αντικειμενο του response.locals στη περιπτωση που δεν υπαρχει το ticket ακομη
               const customTicketId = request.params?.customTicketId || request.query?.customTicketId || response.locals.ticketCreated?.customTicketId
+              const engineer_name = response.locals.engineerUpdated?.userName
 
               // παλι αναλογα το action, δημιουργω τις ειδοποιησεις και για να τις κανω fetch αργοτερα αν το θελω, και τις κανω broadcast με WebSocket για live notifications, στο notification.getaway
               if (Object.values(Notification_action).includes(action as Notification_action)) {
-                await this.notificationService.spreadNotifications(action, customTicketId, userId)
+                await this.notificationService.spreadNotifications(action, customTicketId, userId, engineer_name)
               } else {
-                await this.notificationService.spreadNotifications(action, customTicketId, userId)
+                await this.notificationService.spreadNotifications(action, customTicketId, userId, engineer_name)
               }
             }));          
           }

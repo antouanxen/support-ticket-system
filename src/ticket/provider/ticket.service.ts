@@ -24,6 +24,7 @@ import { AuthRoles } from 'src/authentication/enums/roles.enum';
 export class TicketService {
   constructor(
     private readonly metricsService: MetricsService,
+    @Inject(forwardRef(() => CommentsService) )
     private readonly commentsService: CommentsService,
     private readonly categoryService: CategoryService,
     private readonly customerService: CustomerService,
@@ -140,8 +141,8 @@ export class TicketService {
 
     if (!agent) throw new NotFoundException("User does not exist");
 
-    const ticket = await prisma.ticket.findUnique({
-      where: { customTicketId: customTicketId },
+    const ticket = await prisma.ticket.findFirst({
+      where: { customTicketId: customTicketId, cancelled_date: null },
       include: { customer: true },
     });
 
@@ -221,8 +222,8 @@ export class TicketService {
 
     if (!agent) throw new NotFoundException('User does not exist')
 
-    const ticket = await prisma.ticket.findUnique({
-      where: { customTicketId: customTicketId }
+    const ticket = await prisma.ticket.findFirst({
+      where: { customTicketId: customTicketId, cancelled_date: null }
     })
 
     if (!ticket) throw new NotFoundException('Ticket does not exist')
@@ -279,7 +280,7 @@ export class TicketService {
   }
 
   public async getAllTickets(sortTicketsDto: SortTicketsDto, userId: string): Promise<ticket[]> {
-    const agent = await prisma.user.findUnique({
+    const agent = await prisma.user.findFirst({
       where: { userId: userId, role: { role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
       include: { role: true, category: true }
     });
@@ -295,7 +296,7 @@ export class TicketService {
 
     try {
       const ticketListToBeFound = await prisma.ticket.findMany({
-        where: agent ? {} : { categoryId },
+        where: agent ? { cancelled_date: null } : { categoryId, cancelled_date: null },
         orderBy: [{ created_at: "desc" }, { customTicketId: "asc" }],
         include: {
           category: true,
@@ -344,8 +345,8 @@ export class TicketService {
 
   public async getSingleTicket(customTicketId: string): Promise<ticket> {
     try {
-      const singleTicket = await prisma.ticket.findUnique({
-        where: { customTicketId: customTicketId },
+      const singleTicket = await prisma.ticket.findFirst({
+        where: { customTicketId: customTicketId, cancelled_date: null },
         include: {
           category: true,
           customer: true,
@@ -388,7 +389,7 @@ export class TicketService {
     }
   }
 
-  public async updateTicketStatus(updateTicketStatusDto: UpdateTicketStatusDto, userId: string): Promise<ticket> {
+  public async updateTicketStatusPriority(updateTicketStatusDto: UpdateTicketStatusDto, userId: string): Promise<ticket> {
     const { customTicketId, status } = updateTicketStatusDto;
     const validStatus = ["pending", "resolved", "in_progress"];
 
@@ -453,24 +454,16 @@ export class TicketService {
     if (!agentId) throw new NotFoundException("User does not exist");
 
     try {
-      const ticket = await this.getSingleTicket(customTicketId);
-
-      if (!ticket) {
-        console.log("Το ticket δεν βρεθηκε");
-        throw new NotFoundException("That ticket was not found");
-      }
-
       const newComment = await this.commentsService.AddComment(
         content,
         customTicketId,
         userId,
       );
+
       return newComment;
     } catch (err) {
       console.log("Error creating the comment", err);
-      throw new InternalServerErrorException(
-        "Comment was not created due to server error",
-      );
+      throw new InternalServerErrorException("Comment was not created due to server error");
     }
   }
 
@@ -500,5 +493,71 @@ export class TicketService {
     };
   }
 
-  public async deleteTicket() {}
+  public async cancelTicket(customTicketId: string, userId: string) {
+    try {
+      const userAgent = await prisma.user.findUnique({
+        where: { userId: userId }
+      })
+
+      if (!userAgent) throw new NotFoundException('This user does not exist')
+
+      const ticketToGetRemovedTemp = await prisma.ticket.findUnique({
+        where: { customTicketId: customTicketId }
+      })
+
+      if (!ticketToGetRemovedTemp) throw new NotFoundException('That ticket does not exist')
+
+      const ticketRemovedTemp = await prisma.ticket.update({
+        where: { customTicketId: ticketToGetRemovedTemp.customTicketId },
+        data: {
+          cancelled_date: new Date()
+        },
+        select: {
+          customTicketId: true,
+          cancelled_date: true
+        }
+      })
+
+      return ticketRemovedTemp
+    } catch(err: any) {
+      if (err instanceof NotFoundException) throw err
+      
+      console.log(`There was an error soft-removing the ticket ${customTicketId}`)
+      throw new InternalServerErrorException(`There was an error soft-removing the ticket ${customTicketId}. Please try again later.`)
+    }
+  }
+
+  public async re_openTicket(customTicketId: string, userId: string) {
+    try {
+      const userAgent = await prisma.user.findUnique({
+        where: { userId: userId }
+      })
+
+      if (!userAgent) throw new NotFoundException('This user does not exist')
+
+      const ticketToGetReOpened = await prisma.ticket.findFirst({
+        where: { customTicketId: customTicketId, cancelled_date: { not: null } }
+      })
+
+      if (!ticketToGetReOpened) throw new NotFoundException('That ticket does not exist')
+
+      const ticketReOpened = await prisma.ticket.update({
+        where: { customTicketId: ticketToGetReOpened.customTicketId },
+        data: {
+          re_opened_date: new Date()
+        },
+        select: {
+          customTicketId: true,
+          cancelled_date: true
+        }
+      })
+
+      return ticketReOpened
+    } catch(err: any) {
+      if (err instanceof NotFoundException) throw err
+      
+      console.log(`There was an error re-opening the ticket ${customTicketId}`)
+      throw new InternalServerErrorException(`There was an error re-opening the ticket ${customTicketId}. Please try again later.`)
+    }
+  }
 }

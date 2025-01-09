@@ -7,6 +7,7 @@ import { NewRequestEmailData } from '../interfaces/NewRequestEmailData.interface
 import { UpdateValidationEmailData } from '../interfaces/UpdateValidationEmailData.interface';
 import { RequestType } from 'src/request-permission/enums/requestType.enum';
 import { RequestStatus } from 'src/request-permission/enums/request_status.enum';
+import { EngineerAfterStatsUpdateEmailData } from '../interfaces/EngineerAfterStatsUpdateEmailData.interface';
 
 @Injectable()
 export class MailService {
@@ -106,6 +107,24 @@ export class MailService {
                 requestType: requestType === RequestType.PAYED_LEAVE ? 'Payed Leave' : "Stats Update",
                 issued_at: issuedAtFormatted,
                 request_status: request_status === RequestStatus.APPROVED ? 'approved' : 'rejected',
+                baseUrl: baseUrl
+            }
+        })
+    }
+
+    public async sendEmailToEngineerAfterStatsUpdate(data: EngineerAfterStatsUpdateEmailData) {
+        const { engineer_email, engineer_name, categoryName, role } = data
+        const baseUrl = process.env.BASE_URL
+        await this.mailerService.sendMail({
+            to: engineer_email,
+            from: `Support Team <info@smartupweb.com>`,
+            subject: `New Stats Notification`,
+            template: './layout',
+            context: {
+                engineer_name_updated: engineer_name,
+                engineer_email: engineer_email,
+                categoryName: categoryName,
+                role: role,
                 baseUrl: baseUrl
             }
         })

@@ -3,7 +3,7 @@ import { TicketService } from './provider/ticket.service';
 import { CreateTicketDto } from './dtos/create-ticket.dto';
 import { Request, Response } from 'express';
 import { UpdateTicketStatusDto } from './dtos/update-ticket.dto';
-import { ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddCommentDto } from 'src/comments/dtos/add_comment.dto';
 import { Status } from './enum/status.enum';
 import { SortTicketsDto } from './dtos/sort-tickets.dto';
@@ -192,7 +192,7 @@ export class TicketController {
 
     @ApiBearerAuth()
     @Patch(':customTicketId')
-    @ApiOperation({ summary: 'Use this endpoint to update a ticket status plus make a comment, based on the body' })
+    @ApiOperation({ summary: 'Use this endpoint to update a ticket status or priority plus make a comment, based on the body' })
     @ApiParam({
         name: 'customTicketId', 
         schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
@@ -201,6 +201,7 @@ export class TicketController {
         description: 'Fill the body requirements as shown below',
         schema: { type: 'object', properties: {
             status: { type: 'string', enum: ['resolved', 'in_progress'], description: 'An enum for the status of the ticket issued, use the example options as shown'},
+            priority: { type: 'string', enum: ['low', 'medium', 'high', 'urgent'], description: 'An enum for the priority level of the ticket issued, use the example options as shown'},
             comments: { 
                 type: 'array', 
                 items: { type: 'object', properties: { 
@@ -209,19 +210,19 @@ export class TicketController {
                 examples: [
                 {'content': 'That ticket is to be resolved next Thursday'}, 
                 {'content': 'Could not resolve that ticket because of an app-breaking bug, etc..'} ]} }, 
-                required: ['status'] }, })
+        }, })
     @ApiResponse({ status: 200, description: 'A ticket is updated successfully and gets stored in the database' })
     @ApiResponse({ status: 400, description: 'Bad request. Could not create that ticket'})
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'That ticket was not found' })
     @ApiResponse({ status: 500, description: 'An error occured to the server' })
-    public async updateTicketStatus(@Param('customTicketId') customTicketId: string, @Body('status') status: Status, @Req() req: Request, @Res() res: Response) {
+    public async updateTicketStatus(@Param('customTicketId') customTicketId: string, @Body() updateTicketStatusDto: UpdateTicketStatusDto, @Req() req: Request, @Res() res: Response) {
         const user = req.res.locals.user
         const userId = user.sub
 
-        const updateTicketStatusDto: UpdateTicketStatusDto = { customTicketId: customTicketId, status }
-        console.log('Ενημερωνεις ενα ticket')
-        const ticketUpdated = await this.ticketService.updateTicketStatus(updateTicketStatusDto, userId)
+        updateTicketStatusDto.customTicketId = customTicketId
+        console.log('Ενημερωνεις ενα ticket status/priority')
+        const ticketUpdated = await this.ticketService.updateTicketStatusPriority(updateTicketStatusDto, userId)
 
         if (ticketUpdated) {
             console.log('Updated ticket:', ticketUpdated)
@@ -279,5 +280,51 @@ export class TicketController {
         console.log('Οριστε τα metrics')
 
         return res.status(200).json(ticketMetrics)
+    }
+
+    @Action([ Notification_action.CANCELLED_TICKET, Notification_ownAction.CANCELLED_TICKET ])
+    @ApiBearerAuth()
+    @Patch(':customTicketId/cancel_ticket')
+    @ApiOperation({ summary: 'Use this endpoint to cancel a ticket. Should work as "Resolve a ticket"' })
+    @ApiParam({
+        name: 'customTicketId', 
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
+    })
+    @ApiResponse({ status: 201, description: 'A ticket is cancelled successfully and gets stored in the database' })
+    @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
+    @ApiResponse({ status: 404, description: 'That ticket was not found' })
+    @ApiResponse({ status: 500, description: 'An error occured to the server' })
+    public async cancelTicket(@Param('customTicketId') customTicketId: string, @Req() req: Request, @Res() res: Response) {
+        const user = req.res.locals.user
+        const userId = user.sub
+
+        console.log('Κανεις ενα ticket cancel')
+        const ticketCancelled = await this.ticketService.cancelTicket(customTicketId, userId)
+        console.log('Ticket was cancelled')
+
+        return res.status(200).json({ message: `The ticket ${customTicketId} was cancelled`, ticketCancelled })
+    }
+
+    @Action([ Notification_action.RE_OPEN_TICKET, Notification_ownAction.RE_OPEN_TICKET ])
+    @ApiBearerAuth()
+    @Patch(':customTicketId/reopen_ticket')
+    @ApiOperation({ summary: 'Use this endpoint to re-open a cancelled ticket. Should work as "Resolve a ticket"' })
+    @ApiParam({
+        name: 'customTicketId', 
+        schema: { type: 'string', example: 'BI-000010', description: 'Parameter for the api. The ID of the ticket' }
+    })
+    @ApiResponse({ status: 201, description: 'A cancelled ticket is re-opened successfully and gets stored in the database' })
+    @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
+    @ApiResponse({ status: 404, description: 'That ticket was not found' })
+    @ApiResponse({ status: 500, description: 'An error occured to the server' })
+    public async re_openTicket(@Param('customTicketId') customTicketId: string, @Req() req: Request, @Res() res: Response) {
+        const user = req.res.locals.user
+        const userId = user.sub
+
+        console.log('Κανεις ενα ticket re-open')
+        const ticketCancelled = await this.ticketService.cancelTicket(customTicketId, userId)
+        console.log('Ticket was re-opened')
+
+        return res.status(200).json({ message: `The ticket ${customTicketId} was re-opened`, ticketCancelled })
     }
 }

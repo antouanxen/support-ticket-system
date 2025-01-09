@@ -7,7 +7,6 @@ import { GenerateTokensService } from './generate-tokens.service';
 import { WelcomeEmailData } from 'src/mailer/interfaces/WelcomeEmailData.interface';
 import { MailService } from 'src/mailer/provider/mail.service';
 import { RoleService } from 'src/role/provider/role.service';
-import { CategoryService } from 'src/category/provider/category.service';
 
 @Injectable()
 export class AuthenticateService {
@@ -32,7 +31,7 @@ export class AuthenticateService {
                 data: {
                     userName: username || signUpDto.email?.split('@')[0] || 'new user',
                     userEmail: email,
-                    userPassword: await this.hashingService.hashPassword(password),
+                    userPassword: await this.hashingService.hashPassword(password)
                 }
             })
 
@@ -49,9 +48,8 @@ export class AuthenticateService {
                 email: newUser.userEmail
             })
         } catch(err) {
-            if (err instanceof ConflictException) {
-                throw err
-            }
+            if (err instanceof ConflictException) throw err
+            
             console.log('There was an error with the sign up', err)
             throw new InternalServerErrorException('There was an error creating the user. Try again')
         }

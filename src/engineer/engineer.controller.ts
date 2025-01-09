@@ -4,6 +4,11 @@ import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } 
 import { CreateEngineerDto } from './dtos/create-engineer.dto';
 import { Request, Response } from 'express';
 import { UpdateEngineerDto } from './dtos/update-engineer.dto';
+import { Roles } from 'src/authentication/decorators/roles.decorator';
+import { AuthRoles } from 'src/authentication/enums/roles.enum';
+import { Action } from 'src/app/decorators/action.decorator';
+import { Notification_action } from 'src/app/enums/notification_action.enum';
+import { Notification_ownAction } from 'src/app/enums/notification_ownAction.enum';
 
 @Controller('engineers')
 @ApiTags('Engineers')
@@ -87,8 +92,10 @@ export class EngineerController {
         } else return res.status(404).json({ message: 'That engineer was not found' })
     }
 
+    //@Action([Notification_action.UPDATED_ENGINEER_STATS, Notification_ownAction.UPDATED_ENGINEER_STATS])
     @Patch(':engineerId/update_stats')
-    @ApiOperation({ summary: 'Use this endpoint to update an engineer based on the body' })
+    //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
+    @ApiOperation({ summary: 'Use this endpoint to update an engineer based on the body || ** Roles: Admin, Moderator **' })
     @ApiParam({
         name: 'engineerId', 
         schema: { type: 'string', format: 'UUID', example: '92a04c73-05b2-4cd5-9513-66e623c6a41a', description: 'Parameter for the api. The ID of the engineer' }
@@ -114,6 +121,7 @@ export class EngineerController {
         const engineerUpdated = await this.engineerService.updateEngineerStats(updateEngineerDto, userId)
 
         if (engineerUpdated) {
+            res.locals.engineerUpdated = engineerUpdated
             console.log('Updated engineer:', engineerUpdated)
             console.log('engineer was updated')
             return res.status(200).json(engineerUpdated)

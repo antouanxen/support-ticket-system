@@ -1,0 +1,18 @@
+<h2 style="font-family: Arial, Helvetica, sans-serif; color: #333; text-align: center;">New Stats Notification</h2>
+<p style="margin-bottom: 10px;">Dear <%= engineer_name_updated %>,</p>
+<p style="margin-bottom: 10px;">A Stats update has been made for you, you can check it out.</p>
+<% if (categoryName && !role) { %>
+    <p style="margin-bottom: 10px;">You have been assigned to the category <strong>[<%= categoryName %>]</strong>, based on your expertise and the information you provided.</p>
+<% } else if (!categoryName && role) { %>
+    <p style="margin-bottom: 10px;">You have been assigned the new role of <strong>[<%= role %>]</strong>, which reflectes your expertise</p>
+<% } else { %>
+    <p style="margin-bottom: 10px;">You have been assigned to the category <strong>[<%= categoryName %>]</strong>, based on your expertise and the information you provided.</p>
+    <p style="margin-bottom: 10px;">You have been assigned the new role of <strong>[<%= role %>]</strong>, which reflectes your expertise</p>
+<% } %>
+<p style="margin-bottom: 10px;">
+    <a href="<%= baseUrl %>/tickets/<%= request_id %>" 
+        style="display: inline-block; padding: 10px 20px; font-size: 14px; font-family: Arial, sans-serif; color: #fff; text-decoration: none; background-color: #0056b3; border-radius: 5px;">
+        View Your Whole Tab Here.!
+    </a>
+</p>
+

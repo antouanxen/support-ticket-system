@@ -5,9 +5,10 @@ import { UpdateEngineerDto } from '../dtos/update-engineer.dto';
 import { EngineerTicketsService } from './engineer-tickets.service';
 import { CategoryService } from 'src/category/provider/category.service';
 import { TicketService } from 'src/ticket/provider/ticket.service';
-import { user } from '@prisma/client';
 import { AuthRoles } from 'src/authentication/enums/roles.enum';
 import { RoleService } from 'src/role/provider/role.service';
+import { EngineerAfterStatsUpdateEmailData } from 'src/mailer/interfaces/EngineerAfterStatsUpdateEmailData.interface';
+import { MailService } from 'src/mailer/provider/mail.service';
 
 @Injectable()
 export class EngineerService {
@@ -17,6 +18,7 @@ export class EngineerService {
         private readonly ticketService: TicketService,
         private readonly categoryService: CategoryService,
         private readonly roleService: RoleService,
+        private readonly mailService: MailService
     ) {}
 
     public async createEngineer(createEngineerDto: CreateEngineerDto, userId: string): Promise<Partial<CreateEngineerDto> | { message: string }> {
@@ -137,8 +139,26 @@ export class EngineerService {
                     roleId: role.role_id ?? (engineerToBeUpdated.roleId || null),
                     categoryForEngineersId: category.id ?? (engineerToBeUpdated.categoryForEngineersId || null)
                 },
-                
+                select: {
+                    userId: true,
+                    userName: true,
+                    userEmail: true,
+                    role: { select: { role_description: true } },
+                    category: { select: { categoryName: true } }
+                }             
             })
+
+            if (role_description || categoryName) {
+                const engineerAfterStatsUpdateEmailData: EngineerAfterStatsUpdateEmailData = {
+                    engineer_name: engineer_name || engineerToBeUpdated.userName,
+                    engineer_email: engineer_email || engineerToBeUpdated.userEmail,
+                    categoryName: categoryName,
+                    role: role_description
+                }
+
+                await this.mailService.sendEmailToEngineerAfterStatsUpdate(engineerAfterStatsUpdateEmailData)
+                console.log('πηγε το εμαιλ στον engineer μετα απο stats update')
+            }
 
             return updatedEngineer
         } catch(err) {

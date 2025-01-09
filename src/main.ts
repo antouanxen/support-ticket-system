@@ -28,6 +28,7 @@ async function bootstrap() {
   .setDescription(`Use the base API URL as http://localhost:8000. If it does not work ask Tony`)
   .setTermsOfService(`http://localhost:8000/api/terms-of-service`)
   .addServer('http://192.168.1.160:8000')
+  .addServer(process.env.SERVER_URL)
   .setTitle('Support Ticket System app - API')
   .addBearerAuth()
   .setVersion('1.0')

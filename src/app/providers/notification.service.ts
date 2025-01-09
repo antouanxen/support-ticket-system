@@ -4,7 +4,7 @@ import { Notification_action } from "../enums/notification_action.enum";
 import prisma from "prisma/prisma_Client";
 import { AuthRoles } from "src/authentication/enums/roles.enum";
 import { Notification_ownAction } from "../enums/notification_ownAction.enum";
-import { Subject } from "rxjs";
+import { audit, Subject } from "rxjs";
 import { Notification } from "../interface/notification.interface";
 
 @Injectable()
@@ -15,16 +15,9 @@ export class NotificationService {
   constructor(private readonly reflector: Reflector) {}
 
   // η βασικη μεθοδο της κλασης με ολες τις ενεργειες μεσα, στο τελος θα τη καλεσω στον interceptor που εχω φτιαξει
-  public async spreadNotifications(
-    action: Notification_action | Notification_ownAction,
-    customTicketId: string,
-    userId: string,
-  ) {
+  public async spreadNotifications(action: Notification_action | Notification_ownAction, customTicketId: string, userId: string, engineer_name: string) {
     // βρισκω τους υπολοιπους χρηστες αποδεκτες
-    const usersListeners = await this.getUsersToNotify(
-      action as Notification_action,
-      userId,
-    );
+    const usersListeners = await this.getUsersToNotify(action as Notification_action, userId, engineer_name);
 
     // βρισκω το χρηστη που κανει την ενεργεια αναλογα το userId
     const userWhoActed = await prisma.user.findUnique({
@@ -40,15 +33,11 @@ export class NotificationService {
         let content: string;
 
         // ρυθμιζω αναλογα το action τις ενεργειες του χρηστη για να παρω το content, μενοντας type safe με Οbject.values/includes
-        if (
-          Object.values(Notification_ownAction).includes(
+        if (Object.values(Notification_ownAction).includes(
             action as Notification_ownAction,
           )
         ) {
-          content = await this.createNotificationOwnContent(
-            action as Notification_ownAction,
-            customTicketId,
-          );
+          content = await this.createNotificationOwnContent(action as Notification_ownAction, customTicketId, engineer_name);
 
           // εφοσον θελω να γυρισω μια φορα το content στον ιδιο το χρηστη που κανει την ενεργεια, χρησιμοποιω τις δυνατοτητες του Set()
           if (content.startsWith("you")) {
@@ -61,11 +50,7 @@ export class NotificationService {
           }
         } else {
           // δημιουργω και αποθηκευω το content για τις ειδοποιησεις των υπολοιπων χρηστων
-          content = await this.createNotificationContent(
-            action as Notification_action,
-            customTicketId,
-            userWhoActed.userId,
-          );
+          content = await this.createNotificationContent(action as Notification_action, customTicketId, userWhoActed.userId, engineer_name);
         }
 
         // φτιαχνω στη βαση το notification, σε περιπτωση που θελω να το κανω fetch στο μελλον
@@ -102,10 +87,11 @@ export class NotificationService {
     action: Notification_action,
     customTicketId: string,
     userId: string,
+    engineer_name: string
   ) {
     let content = "";
 
-    // βρισκω τον χρηστη, αλλα και το ticket απο το customTicketId
+    // βρισκω τον χρηστη και το ticket απο το customTicketId
     const user = await prisma.user.findUnique({
       where: { userId: userId },
       select: { userName: true },
@@ -141,6 +127,9 @@ export class NotificationService {
       case Notification_action.REMOVED_ENGINEER:
         content = `${user.userName} ${Notification_action.REMOVED_ENGINEER} ticket: ${ticket.customTicketId}`;
         break;
+      case Notification_action.RE_OPEN_TICKET:
+        content = `${user.userName} ${Notification_action.RE_OPEN_TICKET}: ${ticket.customTicketId}`;
+        break;
       case Notification_action.RESOLVED_TICKET:
         content = `${user.userName} ${Notification_action.RESOLVED_TICKET}: ${ticket.customTicketId}`;
         break;
@@ -149,6 +138,12 @@ export class NotificationService {
         break;
       case Notification_action.UPDATED_CATEGORY:
         content = `${user.userName} ${Notification_action.UPDATED_CATEGORY} ticket: ${ticket.customTicketId}`;
+        break;
+      case Notification_action.UPDATED_PRIORITY:
+        content = `${user.userName} ${Notification_action.UPDATED_PRIORITY} ticket: ${ticket.customTicketId}`;
+        break;
+      case Notification_action.UPDATED_ENGINEER_STATS:
+          content = `${Notification_action.UPDATED_ENGINEER_STATS}: ${engineer_name}`;
         break;
       case Notification_action.UPDATED_DUE_DATE:
         content = `${user.userName} ${Notification_action.UPDATED_DUE_DATE} ticket: ${ticket.customTicketId}`;
@@ -165,6 +160,7 @@ export class NotificationService {
   public async createNotificationOwnContent(
     action: Notification_ownAction,
     customTicketId: string,
+    engineer_name: string
   ) {
     let content = "";
 
@@ -194,6 +190,9 @@ export class NotificationService {
       case Notification_ownAction.REMOVED_ENGINEER:
         content = `${Notification_ownAction.REMOVED_ENGINEER} ticket: ${customTicketId}`;
         break;
+      case Notification_ownAction.RE_OPEN_TICKET:
+        content = `${Notification_ownAction.RE_OPEN_TICKET}: ${customTicketId}`;
+        break;
       case Notification_ownAction.RESOLVED_TICKET:
         content = `${Notification_ownAction.RESOLVED_TICKET}: ${customTicketId}`;
         break;
@@ -202,6 +201,12 @@ export class NotificationService {
         break;
       case Notification_ownAction.UPDATED_CATEGORY:
         content = `${Notification_ownAction.UPDATED_CATEGORY} ticket: ${customTicketId}`;
+        break;
+      case Notification_ownAction.UPDATED_PRIORITY:
+          content = `${Notification_ownAction.UPDATED_PRIORITY} ticket: ${customTicketId}`;
+        break;
+      case Notification_ownAction.UPDATED_ENGINEER_STATS:
+          content = `${Notification_ownAction.UPDATED_ENGINEER_STATS}: ${engineer_name}`;
         break;
       case Notification_ownAction.UPDATED_DUE_DATE:
         content = `${Notification_ownAction.UPDATED_DUE_DATE} ticket: ${customTicketId}`;
@@ -215,7 +220,7 @@ export class NotificationService {
   }
 
   // με τη μεθοδο εδω παιρνω ολους τους users/αποδεκτες εκτος του ιδιου του user που κανει την ενεργεια
-  public async getUsersToNotify(action: Notification_action, userId: string) {
+  public async getUsersToNotify(action: Notification_action, userId: string, engineer_name: string) {
     const usersToNotify = await prisma.user.findMany({
       where: { userId: { not: userId } },
       include: { role: { select: { role_description: true } } },
@@ -228,6 +233,13 @@ export class NotificationService {
       );
 
       return permittedUsers;
+    } else if (action === Notification_action.UPDATED_ENGINEER_STATS) {
+      const permittedUsers = usersToNotify.filter(
+        (user) => (user.role.role_description === AuthRoles.ADMIN || AuthRoles.MODERATOR || AuthRoles.SUPERVISOR || AuthRoles.TEAM_LEADER_ENG) &&
+        (user.userName === engineer_name)
+      )
+
+      return permittedUsers
     }
 
     return usersToNotify;

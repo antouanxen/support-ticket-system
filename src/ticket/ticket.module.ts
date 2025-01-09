@@ -14,7 +14,7 @@ import { GenerateCustomTicketIdService } from './provider/generate-custom-ticket
 import { AssignTicketsByCatToEngsService } from './provider/assign-tickets-by-cat-to-engs.service';
 
 @Module({
-  imports: [CommentsModule, CategoryModule, CustomerModule, forwardRef(() => EngineerModule), ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
+  imports: [forwardRef(() => CommentsModule), CategoryModule, CustomerModule, forwardRef(() => EngineerModule), ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
   controllers: [TicketController],
   providers: [TicketService, MetricsService, DependentTicketService, GenerateCustomTicketIdService, AssignTicketsByCatToEngsService],
   exports: [TicketService]

@@ -6,7 +6,6 @@ import { Request, Response } from 'express';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IsPublic } from './decorators/is-public.decorator';
 import prisma from 'prisma/prisma_Client';
-import { Roles } from './decorators/roles.decorator';
 import { AuthRoles } from './enums/roles.enum';
 
 @Controller('auth')
@@ -100,7 +99,7 @@ export class AuthenticationController {
     @Get('all_users')
     @ApiBearerAuth()
     //@Roles([AuthRoles.ADMIN])
-    @ApiOperation({ summary: 'Use this endpoint to fetch all users from the database' })
+    @ApiOperation({ summary: 'Use this endpoint to fetch all users from the database || ** Roles: Admin **' })
     @ApiResponse({ status: 200, description: 'All the users were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'No users were found' })
@@ -123,7 +122,7 @@ export class AuthenticationController {
     @Patch('user_role_update/:userIdTobeUpdated')
     @ApiBearerAuth()
     //@Roles([AuthRoles.ADMIN, AuthRoles.MODERATOR])
-    @ApiOperation({ summary: 'Use this endpoint to update a user role, based on the body' })
+    @ApiOperation({ summary: 'Use this endpoint to update a user role, based on the body || ** Roles: Admin, Moderator **' })
     @ApiParam({
         name: 'userIdTobeUpdated', 
         schema: { type: 'string', example: '36fa11f2-3ac4-4e4b-9e76-c4db8d1ceec6', description: 'Parameter for the api. The ID of the USER' }

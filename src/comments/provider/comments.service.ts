@@ -1,11 +1,15 @@
-import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, forwardRef, Inject, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import prisma from 'prisma/prisma_Client';
 import { isUUID } from 'class-validator';
 import { newCommentToReturn } from '../types/newCommentToReturn.type';
+import { TicketService } from 'src/ticket/provider/ticket.service';
 
 @Injectable()
 export class CommentsService {
-    constructor() {}
+    constructor(
+        @Inject(forwardRef(() => TicketService) )
+        private readonly ticketService: TicketService,
+    ) {}
 
     public async AddComment(content: string, customTicketId: string, userId: string): Promise<newCommentToReturn> {
         const agentId = userId
@@ -15,7 +19,7 @@ export class CommentsService {
         if (!customTicketId) throw new BadRequestException('No ticket id');
         if (!isUUID(agentId)) throw new BadRequestException('Invalid user-agent ID format');
 
-        const ticket = await prisma.ticket.findUnique({ where: { customTicketId: customTicketId }})
+        const ticket = await this.ticketService.getSingleTicket(customTicketId)
             
         try {
             const newComment = await prisma.comment.create({

@@ -1,5 +1,6 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsEnum, IsOptional, IsString } from "class-validator";
 import { Status } from "../enum/status.enum";
+import { PriorityLevel } from "../enum/priority.enum";
 
 export class UpdateTicketStatusDto {
     @IsString()
@@ -7,7 +8,11 @@ export class UpdateTicketStatusDto {
     customTicketId: string
 
     @IsEnum(Status)
-    @IsNotEmpty()
+    @IsOptional()
     status: Status
+
+    @IsEnum(PriorityLevel)
+    @IsOptional()
+    priority: PriorityLevel
 
 }
