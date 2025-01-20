@@ -12,9 +12,18 @@ import { EngineerModule } from 'src/engineer/engineer.module';
 import { DependentTicketService } from './provider/dependent-ticket.service';
 import { GenerateCustomTicketIdService } from './provider/generate-custom-ticket-id.service';
 import { AssignTicketsByCatToEngsService } from './provider/assign-tickets-by-cat-to-engs.service';
+import { PaginationModule } from 'src/pagination/pagination.module';
 
 @Module({
-  imports: [forwardRef(() => CommentsModule), CategoryModule, CustomerModule, forwardRef(() => EngineerModule), ConfigModule.forFeature(authConfig), JwtModule.registerAsync(authConfig.asProvider())],
+  imports: [
+    forwardRef(() => CommentsModule),
+    CategoryModule,
+    CustomerModule, 
+    forwardRef(() => EngineerModule), 
+    ConfigModule.forFeature(authConfig), 
+    JwtModule.registerAsync(authConfig.asProvider()),
+    PaginationModule
+  ],
   controllers: [TicketController],
   providers: [TicketService, MetricsService, DependentTicketService, GenerateCustomTicketIdService, AssignTicketsByCatToEngsService],
   exports: [TicketService]

@@ -19,6 +19,7 @@
     "deploy:dev": "gcloud config set project key-rider-444310-b6 && gcloud run deploy \"system-ticket-server\" --source . --region=\"europe-west1\""
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.15.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^3.3.0",

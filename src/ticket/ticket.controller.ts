@@ -5,7 +5,6 @@ import { Request, Response } from 'express';
 import { UpdateTicketStatusDto } from './dtos/update-ticket.dto';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AddCommentDto } from 'src/comments/dtos/add_comment.dto';
-import { Status } from './enum/status.enum';
 import { SortTicketsDto } from './dtos/sort-tickets.dto';
 import { getTicketsToSort } from 'utils/getTicketsToSort';
 import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
@@ -21,7 +20,7 @@ export class TicketController {
 
     @ApiBearerAuth()
     @Post()
-    @Action([ Notification_action.CREATED_TICKET, Notification_ownAction.CREATED_TICKET ])
+    //@Action([ Notification_action.CREATED_TICKET, Notification_ownAction.CREATED_TICKET ])
     @ApiOperation({ summary: 'Use this endpoint to create a ticket, and also send a new email to the engineer assigned with it, based on the body. If there is no engineerId handed, it automatically checks and assigns from the database the engineers specialised in a single category analogical to the level of priority. If there are not enough, it returns the total.' })
     @ApiBody({
         description: 'Fill the body requirements as shown below',
@@ -143,6 +142,26 @@ export class TicketController {
         },
         example: 'http://192.168.1.160:8000/tickets?direction=ASC'
     })
+    @ApiQuery({
+        name: 'pageSize',
+        required: false,
+        description: 'The number of tickets that will appear in one page',
+        schema: {
+            type: 'number',
+            default: '8',
+        },
+        example: 'http://192.168.1.160:8000/tickets?orderBy=status&direction=DESC&pageSize=8'
+    })
+    @ApiQuery({
+        name: 'page',
+        required: false,
+        description: 'The number of pages for all tickets',
+        schema: {
+            type: 'number',
+            default: '1',
+        },
+        example: 'http://192.168.1.160:8000/tickets?orderBy=status&direction=DESC&pageSize=8&page=1'
+    })
     @ApiResponse({ status: 200, description: 'All the tickets were fetched successfully' })
     @ApiResponse({ status: 401, description: 'User is Unauthorized to proceed' })
     @ApiResponse({ status: 404, description: 'No tickets were found' })
@@ -152,15 +171,26 @@ export class TicketController {
         const user = req.res.locals.user
         const userId = user.sub
 
-        const ticketList = await this.ticketService.getAllTickets(sortTicketsDto, userId)
-        const sortedTickets = await getTicketsToSort(sortTicketsDto, ticketList)
+       /*  const ticketMetadata = await this.ticketService.getAllTickets(sortTicketsDto, userId)
+        const sortedTickets = await getTicketsToSort(sortTicketsDto, ticketMetadata.data)
 
         if (sortedTickets && sortedTickets.length > 0) {
             return res.status(200).json(sortedTickets)
-        } else if (ticketList && ticketList.length > 0) {
+        } else if (ticketMetadata && ticketMetadata.data.length > 0) {
             console.log('Τα tickets φτασανε')
-            console.log('Tο συνολο τους:', ticketList.length)
-            return res.status(200).json(ticketList)
+            console.log('Tο συνολο τους:', ticketMetadata.data.length)
+            return res.status(200).json(ticketMetadata)
+        } */
+
+        const ticketMetadata = await this.ticketService.getAllTickets(sortTicketsDto, userId)
+        const sortedTickets = await getTicketsToSort(sortTicketsDto, ticketMetadata)
+
+        if (sortedTickets && sortedTickets.length > 0) {
+            return res.status(200).json(sortedTickets)
+        } else if (ticketMetadata && ticketMetadata.length > 0) {
+            console.log('Τα tickets φτασανε')
+            console.log('Tο συνολο τους:', ticketMetadata.length)
+            return res.status(200).json(ticketMetadata)
         }
         else return res.status(404).json({ message: 'No tickets were found' })
     }
@@ -282,7 +312,7 @@ export class TicketController {
         return res.status(200).json(ticketMetrics)
     }
 
-    @Action([ Notification_action.CANCELLED_TICKET, Notification_ownAction.CANCELLED_TICKET ])
+    //@Action([ Notification_action.CANCELLED_TICKET, Notification_ownAction.CANCELLED_TICKET ])
     @ApiBearerAuth()
     @Patch(':customTicketId/cancel_ticket')
     @ApiOperation({ summary: 'Use this endpoint to cancel a ticket. Should work as "Resolve a ticket"' })
@@ -305,7 +335,7 @@ export class TicketController {
         return res.status(200).json({ message: `The ticket ${customTicketId} was cancelled`, ticketCancelled })
     }
 
-    @Action([ Notification_action.RE_OPEN_TICKET, Notification_ownAction.RE_OPEN_TICKET ])
+    //@Action([ Notification_action.RE_OPEN_TICKET, Notification_ownAction.RE_OPEN_TICKET ])
     @ApiBearerAuth()
     @Patch(':customTicketId/reopen_ticket')
     @ApiOperation({ summary: 'Use this endpoint to re-open a cancelled ticket. Should work as "Resolve a ticket"' })

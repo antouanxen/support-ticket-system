@@ -19,6 +19,8 @@ import { GenerateCustomTicketIdService } from "./generate-custom-ticket-id.servi
 import { AssignTicketsByCatToEngsService } from "./assign-tickets-by-cat-to-engs.service";
 import { isUUID } from "class-validator";
 import { AuthRoles } from 'src/authentication/enums/roles.enum';
+import { PaginationService } from 'src/pagination/provider/pagination.service';
+import { Paginated } from 'src/pagination/interfaces/paginated.interface';
 
 @Injectable()
 export class TicketService {
@@ -34,6 +36,7 @@ export class TicketService {
     private readonly mailService: MailService,
     private readonly generateCustomTicketIdService: GenerateCustomTicketIdService,
     private readonly assignTicketsByCatToEngsService: AssignTicketsByCatToEngsService,
+    private readonly paginationService: PaginationService,
   ) {}
 
   public async createTicket(createTicketDto: CreateTicketDto, userId: string): Promise<ticket> {
@@ -279,7 +282,7 @@ export class TicketService {
     }
   }
 
-  public async getAllTickets(sortTicketsDto: SortTicketsDto, userId: string): Promise<ticket[]> {
+  public async getAllTickets(sortTicketsDto: SortTicketsDto, userId: string) {
     const agent = await prisma.user.findFirst({
       where: { userId: userId, role: { role_description: { notIn: [AuthRoles.ENGINEER, AuthRoles.TEAM_LEADER_ENG] } } },
       include: { role: true, category: true }
@@ -293,14 +296,45 @@ export class TicketService {
     if (!agent && !engineerByCategory) throw new NotFoundException("User does not exist");
 
     const categoryId = engineerByCategory?.category?.id;
+    const { page, pageSize } = sortTicketsDto
 
     try {
+    /*   const paginatedResponse = await this.paginationService.paginateResults(
+        prisma.ticket.count,
+        prisma.ticket.findMany,
+        { page, pageSize },
+        {
+          where: agent ? { cancelled_date: null } : { categoryId, cancelled_date: null },
+          orderBy: [{ created_at: "desc" }, { customTicketId: "asc" }],
+           include: {
+            category: true,
+            customer: true,
+            dependent_tickets_parent: true ,
+            dependent_tickets_child: true ,
+            assigned_engineers: {
+              select: {
+                user: {
+                  select: {
+                    userId: true, userName: true, userEmail: true 
+                  },             
+                },
+              },
+            },
+            userAgent: {
+              select: {
+                userId: true, userName: true, userEmail: true 
+              },
+            },
+          } 
+        }
+      ) */
+
       const ticketListToBeFound = await prisma.ticket.findMany({
         where: agent ? { cancelled_date: null } : { categoryId, cancelled_date: null },
         orderBy: [{ created_at: "desc" }, { customTicketId: "asc" }],
         include: {
-          category: true,
           customer: true,
+          category: true,
           dependent_tickets_parent: true ,
           dependent_tickets_child: true ,
           assigned_engineers: {
@@ -320,6 +354,8 @@ export class TicketService {
           },
       });
 
+      //const { data: ticketListToBeFound } = paginatedResponse
+
       const ticketListFound = async (ticketData: typeof ticketListToBeFound) => {
         return await Promise.all(ticketData.map(ticket => {
          return {
@@ -328,18 +364,19 @@ export class TicketService {
             dependent_tickets_parent: ticket.dependent_tickets_child.map(child => child.ticketCustomId)
           }
         })
-      )}
+      )} 
 
       const ticketsFetched = await ticketListFound(ticketListToBeFound)
 
+      /* if (ticketsFetched && ticketsFetched.length > 0) {
+        return { ...paginatedResponse, data: ticketsFetched };
+      } else return { ...paginatedResponse, data: [] };  */
       if (ticketsFetched && ticketsFetched.length > 0) {
         return ticketsFetched;
-      } else return [];
+      } else return []; 
     } catch (err: any) {
       console.log("No tickets were returned", err);
-      throw new InternalServerErrorException(
-        "There was an error with the server. Try again",
-      );
+      throw new InternalServerErrorException("There was an error with the server. Try again");
     }
   }
 
@@ -350,7 +387,7 @@ export class TicketService {
         include: {
           category: true,
           customer: true,
-          comment: true,
+          comment: { select: { id: true, content: true, created_at: true, user: { select: { userName: true } }, ticket: { select: { customTicketId: true } } } },
           dependent_tickets_parent: true,
           dependent_tickets_child: true,
           assigned_engineers: {
@@ -374,8 +411,17 @@ export class TicketService {
         throw new NotFoundException(`Could not find the ticket with customTicketId: ${customTicketId}`);
       }
 
+      const commentForTicket = singleTicket?.comment?.map(com => ({
+        id: com.id,
+        content: com.content,
+        created_at: com.created_at,
+        userName: com.user.userName,
+        customTicketId: com.ticket.customTicketId,
+      }))
+
       const ticketFetched = {
         ...singleTicket,
+        comment: singleTicket.comment ? commentForTicket : null,
         dependent_tickets_child: singleTicket.dependent_tickets_parent ? singleTicket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId) : null,
         dependent_tickets_parent: singleTicket.dependent_tickets_child ? singleTicket.dependent_tickets_child.map(child => child.ticketCustomId) : null
       }

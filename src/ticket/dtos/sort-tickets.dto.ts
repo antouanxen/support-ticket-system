@@ -1,14 +1,15 @@
 import OrderByField from "utils/OrderByField.type";
 import DirectionField from "utils/DirectionField.type";
-import { IsDateString, IsOptional, IsString} from "class-validator";
+import { IsOptional, IsString} from "class-validator";
+import { PaginationQueryDto } from "src/pagination/dtos/paginationQuery.dto";
 
-export class SortTicketsDto {
-    @IsString()
+export class SortTicketsDto extends PaginationQueryDto {
+   
     @IsOptional()
-    orderBy: OrderByField
+    @IsString()
+    orderBy?: OrderByField
     
-    @IsString()
     @IsOptional()
-    direction: DirectionField
-
+    @IsString()
+    direction?: DirectionField
 }
