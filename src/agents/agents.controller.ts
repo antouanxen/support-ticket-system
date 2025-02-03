@@ -8,6 +8,7 @@ import { AuthRoles } from 'src/authentication/enums/roles.enum';
 import { IsPublic } from 'src/authentication/decorators/is-public.decorator';
 import { AssignAgentDto } from './dtos/assignAgent.dto';
 import axios from 'axios';
+import { UpdateAgentStatsDto } from './dtos/update-agent.dto';
 
 @Controller('agents')
 @ApiTags('Agents')
@@ -171,8 +172,34 @@ export class AgentsController {
         }
         else return res.status(400).json({ message: 'The role was not updated for the agent, check the body' })
     }
+
+    @Post(':agentId/new_stats')
+    @ApiOperation({ summary: 'Use this endpoint to update an agent with the request ID from the request body, password is not returned for safety reasons.' })
+    @ApiParam({
+        name: 'agentId', 
+        schema: { type: 'string', format: 'UUID', example: '224f77e3-17b2-4521-a971-567b72653b4d', description: '1st Parameter for the api. The ID of the agent' }
+    })
+    @ApiParam({
+        name: 'request_id', 
+        schema: { type: 'string', format: 'UUID', example: '8da819e1-f650-44f5-8ca3-df47fbc0b768', description: '2nd Parameter for the api. The ID of the request' }
+    })
+    @ApiResponse({ status: 200, description: 'An agent stats is updated successfully and gets stored in the database' })
+    @ApiResponse({ status: 400, description: 'Bad request. Could not update that agent'})
+    @ApiResponse({ status: 404, description: 'That agent or request was not found' })
+    @ApiResponse({ status: 500, description: 'An error occured to the server' })
+    public async updateAgent(@Param('agentId') agentId: string, @Body() updateAgentStatsDto: UpdateAgentStatsDto, @Req() req: Request, @Res() res: Response) {
+        console.log('Ενημερωνεις ενος user agent τα stats')
+        
+        const agentUpdated = await this.agentService.updateAgentDetails(agentId, updateAgentStatsDto)
+
+        if (agentUpdated) {
+            console.log('Updated agent:', agentUpdated)
+            console.log('user agent was updated')
+            if ('agentName' in agentUpdated) return res.status(200).json({ message: `This agent: ${agentUpdated.agentName} got his stats updated.`, agentUpdated })
+        }  else return res.status(400).json({ message: 'Something was wrong with the body, updating the user agent stats' })
+    }
     
-    @Post(':agentId/new_stats/:request_id')
+    /* @Post(':agentId/new_stats/:request_id')
     @IsPublic(true)
     @ApiOperation({ summary: 'Use this endpoint to update an agent with the request ID from the request body, password is not returned for safety reasons.' })
     @ApiParam({
@@ -232,7 +259,7 @@ export class AgentsController {
             console.log('error to redirect after post', err)
             throw new InternalServerErrorException('Failed to process the request. Try again')
         }
-    }
+    } */
 
     @ApiBearerAuth()
     @Delete(':agentId')

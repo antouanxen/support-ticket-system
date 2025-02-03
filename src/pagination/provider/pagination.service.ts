@@ -11,7 +11,7 @@ export class PaginationService {
         private readonly request: Request
     ) {}
 
-    public async paginateResults<T, Args extends { where: any; orderBy?: { [key: string]: 'asc' | 'desc'} | { [key: string]: 'asc' | 'desc'}[] ; skip?: number; take?: number, select?: any, include?: any }>(
+    public async paginateResults<T, Args extends { where: any; orderBy?: {[key: string]: 'asc' | 'desc'} | {[key: string]: 'asc' | 'desc' }[]; skip?: number; take?: number, select?: any, include?: any }>(
         count: (args?: { where: any }) => Promise<number>,
         model: (args?: Args) => Promise<T[]>,
         paginationQueryDto: PaginationQueryDto,

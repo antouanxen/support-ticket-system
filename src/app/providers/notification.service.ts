@@ -33,10 +33,7 @@ export class NotificationService {
         let content: string;
 
         // ρυθμιζω αναλογα το action τις ενεργειες του χρηστη για να παρω το content, μενοντας type safe με Οbject.values/includes
-        if (Object.values(Notification_ownAction).includes(
-            action as Notification_ownAction,
-          )
-        ) {
+        if (Object.values(Notification_ownAction).includes(action as Notification_ownAction)) {
           content = await this.createNotificationOwnContent(action as Notification_ownAction, customTicketId, engineer_name);
 
           // εφοσον θελω να γυρισω μια φορα το content στον ιδιο το χρηστη που κανει την ενεργεια, χρησιμοποιω τις δυνατοτητες του Set()

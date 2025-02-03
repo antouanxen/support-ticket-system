@@ -21,8 +21,8 @@ model comment {
   content    String
   created_at DateTime @default(now()) @db.Timestamp(6)
   ticketId   String?  @db.Uuid
-  userId     String?  @db.Uuid
-  user       user?    @relation(fields: [userId], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_1a0a9c69d17cfb196d090858bc8")
+  userUserId String?  @db.Uuid
+  user       user?    @relation(fields: [userUserId], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_1a0a9c69d17cfb196d090858bc8")
   ticket     ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_7522f1f6b36fa4b1742762a17f9")
 }
 
@@ -78,7 +78,6 @@ model ticket {
   issue_description        String?
   priority                 String               @db.VarChar(150)
   status                   String               @db.VarChar(150)
-  featuredImageUrl         String?              @db.VarChar(1054)
   customTicketId           String               @unique(map: "UQ_e9f7fd3d9442ba4c97a4c80e7df") @db.VarChar(10)
   created_at               DateTime             @default(now()) @db.Timestamp(6)
   updated_at               DateTime             @default(now()) @db.Timestamp(6)
@@ -92,6 +91,7 @@ model ticket {
   comment                  comment[]
   dependent_tickets_child  dependent_tickets[]  @relation("dependent_tickets_child")
   dependent_tickets_parent dependent_tickets[]  @relation("dependent_tickets_parent")
+  file                     file[]
   userAgent                user                 @relation(fields: [userAgentId], references: [userId], onDelete: NoAction, onUpdate: NoAction, map: "FK_561eeb74b28cbf8b6b5cae6bc92")
   customer                 customer             @relation(fields: [customerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_8932781487db15d1393b206482e")
   category                 category             @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_ffa1e18b27ae5dfb0988873354a")
@@ -165,4 +165,19 @@ model supervisors_users {
   supervisors_users_supervisor user?    @relation("supervisors_users_supervisor", fields: [supervisor], references: [userId], onUpdate: NoAction, map: "FK_7d0b7cd3db17cc67b1f1afc2807")
 
   @@unique([supervisor, user], map: "UQ_6a47a3a5952d27dfc61ba220b5d")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model file {
+  file_id     String   @id(map: "PK_37d2332c95c19b4882bdab5e261") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  file_name   String   @db.VarChar(128)
+  publicUrl   String   @unique(map: "UQ_fea0ca17a255b451a89bc9f1cc6") @db.VarChar(256)
+  file_type   String   @db.VarChar(128)
+  file_size   Int
+  description String?  @default("")
+  userName    String   @default("Anonymous") @db.VarChar(128)
+  createDate  DateTime @default(now()) @db.Timestamp(6)
+  updateDate  DateTime @default(now()) @db.Timestamp(6)
+  ticketId    String?  @db.Uuid
+  ticket      ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_ddb767cf2965efd177f38d0b70e")
 }

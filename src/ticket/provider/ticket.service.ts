@@ -45,17 +45,18 @@ export class TicketService {
       issue_description,
       priority,
       categoryName,
-      featuredImageUrl,
+      file_description,
+      file_id,
       due_date,
       dependent_ticketCustomId,
       engineerIds,
     } = createTicketDto;
 
-    const agent = await prisma.user.findUnique({
+    const userAgent = await prisma.user.findUnique({
       where: { userId: userId },
     });
 
-    if (!agent) throw new NotFoundException("User does not exist");
+    if (!userAgent) throw new NotFoundException("User does not exist");
 
     const customer = await this.customerService.getSingleCustomerByName(c_name);
     const category = await this.categoryService.getSingleCategoryByName(categoryName);
@@ -65,11 +66,10 @@ export class TicketService {
       const newTicket = await prisma.ticket.create({
         data: {
           customerId: customer.id,
-          userAgentId: agent.userId,
+          userAgentId: userAgent.userId,
           issue_description: issue_description,
           priority: priority,
           categoryId: category.id,
-          featuredImageUrl: featuredImageUrl ? featuredImageUrl : null,
           due_date: due_date ? due_date : null,
           status: Status.PENDING,
           customTicketId: customTicketId,
@@ -114,6 +114,21 @@ export class TicketService {
         }
       } else {
         throw new BadRequestException("The ID of the engineer was wrong");
+      }
+
+        // Αν υπάρχει αρχείο, το συνδέουμε με το ticketId
+      if (file_id) {
+        const fileForTicket = await prisma.file.update({
+            where: { file_id: file_id },
+            data: {
+                ticketId: newTicket.id,
+                description: file_description || "",
+                userName: userAgent.userName, 
+            },
+        });
+        console.log("File successfully linked to ticket:", fileForTicket);
+      } else {
+        console.log("No file was provided for this ticket.");
       }
 
       return newTicket;
@@ -335,8 +350,13 @@ export class TicketService {
         include: {
           customer: true,
           category: true,
-          dependent_tickets_parent: true ,
-          dependent_tickets_child: true ,
+          dependent_tickets_parent: true,
+          dependent_tickets_child: true,
+          file: {
+            select: {
+              publicUrl: true,
+            }
+          },
           assigned_engineers: {
             select: {
               user: {
@@ -360,6 +380,7 @@ export class TicketService {
         return await Promise.all(ticketData.map(ticket => {
          return {
             ...ticket,
+            file: ticket.file.map(f => f.publicUrl),
             dependent_tickets_child: ticket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId),
             dependent_tickets_parent: ticket.dependent_tickets_child.map(child => child.ticketCustomId)
           }
@@ -390,6 +411,11 @@ export class TicketService {
           comment: { select: { id: true, content: true, created_at: true, user: { select: { userName: true } }, ticket: { select: { customTicketId: true } } } },
           dependent_tickets_parent: true,
           dependent_tickets_child: true,
+          file: {
+            select: {
+              publicUrl: true
+            }
+          },
           assigned_engineers: {
             select: {
               user: {
@@ -421,6 +447,7 @@ export class TicketService {
 
       const ticketFetched = {
         ...singleTicket,
+        file: singleTicket.file ? singleTicket.file.map(f => f.publicUrl): null,
         comment: singleTicket.comment ? commentForTicket : null,
         dependent_tickets_child: singleTicket.dependent_tickets_parent ? singleTicket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId) : null,
         dependent_tickets_parent: singleTicket.dependent_tickets_child ? singleTicket.dependent_tickets_child.map(child => child.ticketCustomId) : null

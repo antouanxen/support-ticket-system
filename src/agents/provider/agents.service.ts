@@ -192,14 +192,14 @@ export class AgentsService {
         }
     }
 
-    public async updateAgentDetails(agentId: string, request_id: string): Promise<UpdateAgentStatsDto | { message: string }> {
+    public async updateAgentDetails(agentId: string, updateAgentStatsDto: UpdateAgentStatsDto): Promise<UpdateAgentStatsDto | { message: string }> {
         
-        const processedRequest = await this.reqPermService.findProcessedRequest(agentId, request_id)
+        /* const processedRequest = await this.reqPermService.findProcessedRequest(agentId, request_id)
 
         if (processedRequest.request_status === RequestStatus.APPROVED) {
             const approvedRequest = processedRequest
             
-            if (approvedRequest && approvedRequest.requestForAgent === agentId) {
+            if (approvedRequest && approvedRequest.requestForAgent === agentId) { */
                 try {
                     const agentToBeUpdated = await prisma.user.findUnique({ where: { userId: agentId } })
                     if (!agentToBeUpdated) throw new NotFoundException('That agent does not exist in the database')
@@ -207,9 +207,9 @@ export class AgentsService {
                     const updatedAgentWithPerm = await prisma.user.update({ 
                         where: { userId: agentToBeUpdated.userId },
                         data: {
-                            userName: approvedRequest.agentName ?? agentToBeUpdated.userName,
-                            userEmail: approvedRequest.agentEmail ?? agentToBeUpdated.userEmail,
-                            userPassword: approvedRequest.agentPassword ?? agentToBeUpdated.userPassword
+                            userName: updateAgentStatsDto.agentName ?? agentToBeUpdated.userName,
+                            userEmail: updateAgentStatsDto.agentEmail ?? agentToBeUpdated.userEmail,
+                            userPassword: updateAgentStatsDto.agentPassword ?? agentToBeUpdated.userPassword
                         }
                     })
     
@@ -227,10 +227,8 @@ export class AgentsService {
                     console.log(`error updating the stats for agent with ID: ${agentId}`, err)
                     throw new InternalServerErrorException(`There was an error updating the agent stats. Must be the server, try again.`)
                 }
-            }
-        }
-        else return { message: 'The request was rejected. Please communicate with your supervisor.'}
     }
+        //else return { message: 'The request was rejected. Please communicate with your supervisor.'}
 
     public async deleteAnAgent(agentIdToDelete: string, userId: string) {
         const agentId = userId

@@ -36,9 +36,13 @@ export class CreateTicketDto {
     engineerIds?: string | string[]
 
     @IsOptional()
-    @IsUrl()
-    @MaxLength(1024)
-    featuredImageUrl?: string | null
+    @IsString()
+    @MaxLength(128)
+    file_description?: string | null
+
+    @IsOptional()
+    @IsString()
+    file_id?: string
 
     @IsOptional()
     @IsString()
