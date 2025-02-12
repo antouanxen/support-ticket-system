@@ -380,7 +380,7 @@ export class TicketService {
         return await Promise.all(ticketData.map(ticket => {
          return {
             ...ticket,
-            file: ticket.file.map(f => f.publicUrl),
+            file: ticket.file ? ticket.file.map(f => f.publicUrl) : null,
             dependent_tickets_child: ticket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId),
             dependent_tickets_parent: ticket.dependent_tickets_child.map(child => child.ticketCustomId)
           }
@@ -447,7 +447,7 @@ export class TicketService {
 
       const ticketFetched = {
         ...singleTicket,
-        file: singleTicket.file ? singleTicket.file.map(f => f.publicUrl): null,
+        file: singleTicket.file ? singleTicket.file.map(f => f.publicUrl) : null,
         comment: singleTicket.comment ? commentForTicket : null,
         dependent_tickets_child: singleTicket.dependent_tickets_parent ? singleTicket.dependent_tickets_parent.map(parent => parent.dependentTicketCustomId) : null,
         dependent_tickets_parent: singleTicket.dependent_tickets_child ? singleTicket.dependent_tickets_child.map(child => child.ticketCustomId) : null
